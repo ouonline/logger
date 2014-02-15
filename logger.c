@@ -115,10 +115,12 @@ static inline void generic_logger(int level, const char* filename, int line,
     if (is_another_day(&tm))
         new_log_level_file(level);
 
+    /* TODO optimize: put conent into a buffer */
     pthread_mutex_lock(&g_[level].lock);
     fprintf(g_[level].fp, "%s %s %s:%d\t", timestr,
             level_str_upper[level], filename, line);
     vfprintf(g_[level].fp, fmt, args);
+    fprintf(g_[level].fp, "\n");
     pthread_mutex_unlock(&g_[level].lock);
 }
 
@@ -135,10 +137,12 @@ void __log_info(const char* fmt, ...)
 
     va_start(args, fmt);
 
+    /* TODO optimize: put conent into a buffer */
     pthread_mutex_lock(&g_[LEVEL_INFO].lock);
     fprintf(g_[LEVEL_INFO].fp, "%s %s\t", timestr,
             level_str_upper[LEVEL_INFO]);
     vfprintf(g_[LEVEL_INFO].fp, fmt, args);
+    fprintf(g_[LEVEL_INFO].fp, "\n");
     pthread_mutex_unlock(&g_[LEVEL_INFO].lock);
 
     va_end(args);

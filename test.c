@@ -6,8 +6,8 @@ int main(void)
 
     log_init("ouonline.");
 
-    log_debug("a = %d.\n", a);
-    log_debug("a = %d.\n", a);
+    log_debug("a = %d.", a);
+    log_debug("a = %d.", a);
 
     return 0;
 }
