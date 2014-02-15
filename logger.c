@@ -20,11 +20,13 @@ static const char* log_level_str_lower[] = {
     "debug", "info", "warning", "error", "fatal",
 };
 
-#define MAX_LOG_LEN (4096 - sizeof(FILE*) - sizeof(pthread_mutex_t))
+#define MAX_LOG_LEN \
+    (4096 - sizeof(FILE*) - sizeof(pthread_mutex_t) - sizeof(struct tm))
 
 static struct {
     FILE* fp;
     pthread_mutex_t lock;
+    struct tm ts;
     char buf[MAX_LOG_LEN];
 } __attribute__((packed)) g_[LOG_LEVEL_MAX];
 
@@ -39,27 +41,14 @@ static char g_path[PATH_BUFLEN];
 
 /* ------------------------------------------------------------------------- */
 
-/* YYYY-MM-DD */
-static inline void current_date(char *buf, int size)
+static inline void __new_log_level_file(int level, const struct tm* ts)
 {
-    time_t t;
-    struct tm tm;
-
-    time(&t);
-    localtime_r(&t, &tm);
-    strftime(buf, size, "%F", &tm);
-}
-
-static inline void __new_log_level_file(int level)
-{
-    char timestr[32];
-    current_date(timestr, 32);
-
     if (g_[level].fp && g_[level].fp != stdout && g_[level].fp != stderr)
         fclose(g_[level].fp);
 
-    sprintf(g_path + g_path_prefix_len, "%s.%s",
-            timestr, log_level_str_lower[level]);
+    sprintf(g_path + g_path_prefix_len, "%04d-%02d-%02d.%s",
+            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+            log_level_str_lower[level]);
 
     g_[level].fp = fopen(g_path, "a");
     if (!g_[level].fp) {
@@ -84,16 +73,16 @@ static inline void current_datetime(char *buf, int size, struct tm* tp)
     sprintf(buf + len, ".%06ld", tv.tv_usec);
 }
 
-static inline int is_another_day(struct tm* tp)
+static inline int is_another_day(const struct tm* new, struct tm* old)
 {
-    static unsigned int day = 0, mon = 0, year = 0;
-
-    if (tp->tm_mday == day && tp->tm_mon == mon && tp->tm_year == year)
+    if ((old->tm_mday == new->tm_mday) &&
+        (old->tm_mon == new->tm_mon) &&
+        (old->tm_year == new->tm_year))
         return 0;
 
-    day = tp->tm_mday;
-    mon = tp->tm_mon;
-    year = tp->tm_year;
+    old->tm_mday = new->tm_mday;
+    old->tm_mon = new->tm_mon;
+    old->tm_year = new->tm_year;
 
     return 1;
 }
@@ -109,8 +98,8 @@ static inline void generic_logger(int level, const char* extra_info,
 
     pthread_mutex_lock(&g_[level].lock);
 
-    if (is_another_day(&tm))
-        __new_log_level_file(level);
+    if (is_another_day(&tm, &g_[level].ts))
+        __new_log_level_file(level, &tm);
 
     len = sprintf(g_[level].buf, "%s %s\t", timestr, extra_info);
     vsnprintf(g_[level].buf + len, MAX_LOG_LEN - len, fmt, args);
@@ -176,16 +165,6 @@ void __log_fatal(const char* filename, int line, const char* fmt, ...)
 
 /* ------------------------------------------------------------------------- */
 
-static inline void __date_init(void)
-{
-    time_t t;
-    struct tm tm;
-
-    time(&t);
-    localtime_r(&t, &tm);
-    is_another_day(&tm);
-}
-
 static inline void path_buffer_init(const char* prefix)
 {
     g_path_prefix_len = strlen(prefix);
@@ -198,19 +177,28 @@ static inline void path_buffer_init(const char* prefix)
     memcpy(g_path, prefix, g_path_prefix_len);
 }
 
+static inline void current_date(struct tm* ts)
+{
+    time_t t;
+
+    time(&t);
+    localtime_r(&t, ts);
+}
+
 int log_init(const char* prefix)
 {
     int i;
-
-    __date_init();
+    struct tm ts;
 
     path_buffer_init(prefix);
 
     for (i = 0; i < LOG_LEVEL_MAX; ++i)
         pthread_mutex_init(&g_[i].lock, NULL);
 
+    current_date(&ts);
+
     for (i = 0; i < LOG_LEVEL_MAX; ++i)
-        __new_log_level_file(i);
+        __new_log_level_file(i, &ts);
 
     return 0;
 }
