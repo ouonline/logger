@@ -2,12 +2,14 @@
 
 int main(void)
 {
-    int a = 5;
-
+    const char* str = "Hello, world!";
     log_init("ouonline.");
 
-    log_debug("a = %d.", a);
-    log_debug("a = %d.", a);
+    log_debug("str -> %s.", str);
+    log_info("str -> %s.", str);
+    log_warning("str -> %s.", str);
+    log_error("str -> %s.", str);
+    log_fatal("str -> %s.", str);
 
     return 0;
 }
