@@ -96,6 +96,9 @@ static inline void current_datetime(char *buf, int size, struct tm* tp)
     sprintf(buf + len, ".%06ld", tv.tv_usec);
 }
 
+#include <unistd.h>
+#include <sys/syscall.h>
+
 static void generic_logger(int level, const char* extra_info,
                            const char* fmt, va_list args)
 {
@@ -116,7 +119,8 @@ static void generic_logger(int level, const char* extra_info,
         g_[level].ts.tm_year = tm.tm_year;
     }
 
-    len = sprintf(g_[level].buf, "%s %s\t", timestr, extra_info);
+    len = sprintf(g_[level].buf, "%s %ld %s\t", timestr,
+                  syscall(__NR_gettid), extra_info);
     vsnprintf(g_[level].buf + len, MAX_LOG_LEN - len, fmt, args);
     len = fprintf(g_[level].fp, "%s\n", g_[level].buf);
 
