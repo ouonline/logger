@@ -9,15 +9,16 @@
 
 /* ------------------------------------------------------------------------- */
 
-#define LOG_LEVEL_DEBUG     0
-#define LOG_LEVEL_INFO      1
-#define LOG_LEVEL_WARNING   2
-#define LOG_LEVEL_ERROR     3
-#define LOG_LEVEL_FATAL     4
-#define LOG_LEVEL_MAX       5
+#define LOG_LEVEL_USER      0
+#define LOG_LEVEL_DEBUG     1
+#define LOG_LEVEL_INFO      2
+#define LOG_LEVEL_WARNING   3
+#define LOG_LEVEL_ERROR     4
+#define LOG_LEVEL_FATAL     5
+#define LOG_LEVEL_MAX       6
 
 static const char* log_level_str_lower[] = {
-    "debug", "info", "warning", "error", "fatal",
+    "user", "debug", "info", "warning", "error", "fatal",
 };
 
 struct log_tm {
@@ -129,10 +130,17 @@ static void generic_logger(int level, const char* extra_info,
     pthread_mutex_unlock(&g_[level].lock);
 }
 
+void __log_user(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    generic_logger(LOG_LEVEL_USER, "", fmt, args);
+    va_end(args);
+}
+
 void __log_info(const char* fmt, ...)
 {
     va_list args;
-
     va_start(args, fmt);
     generic_logger(LOG_LEVEL_INFO, "", fmt, args);
     va_end(args);
