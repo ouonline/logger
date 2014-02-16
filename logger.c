@@ -129,7 +129,9 @@ static void generic_logger(int level, const char* extra_info,
 
 #ifndef NDEBUG
     if (level == LOG_LEVEL_DEBUG)
-        fprintf(stderr, "%s\n", g_[LOG_LEVEL_DEBUG].buf);
+        fprintf(stdout, "%s %s\n", log_level_str_lower[level], g_[level].buf);
+    else if (level >= LOG_LEVEL_WARNING)
+        fprintf(stderr, "%s %s\n", log_level_str_lower[level], g_[level].buf);
 #endif
 
     pthread_mutex_unlock(&g_[level].lock);
@@ -162,6 +164,7 @@ static inline void log_with_pos_info(int level, const char* filename, int line,
     generic_logger(level, pos_info, fmt, args);
 }
 
+#ifndef NDEBUG
 void __log_debug(const char* filename, int line, const char* fmt, ...)
 {
     va_list args;
@@ -169,6 +172,7 @@ void __log_debug(const char* filename, int line, const char* fmt, ...)
     log_with_pos_info(LOG_LEVEL_DEBUG, filename, line, fmt, args);
     va_end(args);
 }
+#endif
 
 void __log_warning(const char* filename, int line, const char* fmt, ...)
 {
