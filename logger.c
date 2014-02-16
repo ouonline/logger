@@ -20,35 +20,58 @@ static const char* log_level_str_lower[] = {
     "debug", "info", "warning", "error", "fatal",
 };
 
-#define MAX_LOG_LEN \
-    (4096 - sizeof(FILE*) - sizeof(pthread_mutex_t) - sizeof(struct tm))
+struct log_tm {
+    unsigned tm_year : 16;
+    unsigned tm_mon : 8;
+    unsigned tm_mday : 8;
+    unsigned tm_hour : 8;
+    unsigned padding : 24;
+} __attribute__((packed));
+
+#define MAX_LOG_LEN (4096 \
+                     - sizeof(FILE*) \
+                     - sizeof(struct log_tm) \
+                     - sizeof(unsigned long) \
+                     - sizeof(pthread_mutex_t))
 
 static struct {
     FILE* fp;
+    struct log_tm ts; /* timestamp of last write */
+    unsigned long filesize;
     pthread_mutex_t lock;
-    struct tm ts;
     char buf[MAX_LOG_LEN];
 } __attribute__((packed)) g_[LOG_LEVEL_MAX];
 
-/* log filename will be <prefix>YYYY-MM-DD.<level>
+/* log filename may be one of the following forms:
+ *     - <prefix>YYYY-MM-DD.<level>
+ *     - <prefix>YYYY-MM-DD_hh.<level>
+ *     - <prefix>YYYY-MM-DD_hh:mm:ss.<level>
  * max(strlen(level_str[])) == strlen("warning") == 7 */
-#define PATH_BUFLEN             1024
+
+#define PATH_BUFLEN             1024 /* >= 28 */
 #define MAX_PATH_LEN            (PATH_BUFLEN - 1)
-#define MAX_PATH_PREFIX_LEN     (MAX_PATH_LEN - 19 /* 19 >= YYYY-MM-DD.<level> */)
+#define MAX_PATH_PREFIX_LEN     (MAX_PATH_LEN - 27)
+
+static unsigned long g_max_file_size;
 
 static int g_path_prefix_len;
 static char g_path[PATH_BUFLEN];
+
+int (*g_rotate_trigger)(const struct tm* current, const struct log_tm* old,
+                        unsigned long filesize);
+
+void (*g_get_filename)(char* buf, int level, const struct tm* ts);
 
 /* ------------------------------------------------------------------------- */
 
 static inline void __new_log_level_file(int level, const struct tm* ts)
 {
+    g_[level].filesize = 0;
+
     if (g_[level].fp && g_[level].fp != stdout && g_[level].fp != stderr)
         fclose(g_[level].fp);
 
-    sprintf(g_path + g_path_prefix_len, "%04d-%02d-%02d.%s",
-            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
-            log_level_str_lower[level]);
+    g_get_filename(g_path + g_path_prefix_len, level, ts);
 
     g_[level].fp = fopen(g_path, "a");
     if (!g_[level].fp) {
@@ -73,22 +96,8 @@ static inline void current_datetime(char *buf, int size, struct tm* tp)
     sprintf(buf + len, ".%06ld", tv.tv_usec);
 }
 
-static inline int is_another_day(const struct tm* new, struct tm* old)
-{
-    if ((old->tm_mday == new->tm_mday) &&
-        (old->tm_mon == new->tm_mon) &&
-        (old->tm_year == new->tm_year))
-        return 0;
-
-    old->tm_mday = new->tm_mday;
-    old->tm_mon = new->tm_mon;
-    old->tm_year = new->tm_year;
-
-    return 1;
-}
-
-static inline void generic_logger(int level, const char* extra_info,
-                                  const char* fmt, va_list args)
+static void generic_logger(int level, const char* extra_info,
+                           const char* fmt, va_list args)
 {
     int len;
     struct tm tm;
@@ -98,12 +107,20 @@ static inline void generic_logger(int level, const char* extra_info,
 
     pthread_mutex_lock(&g_[level].lock);
 
-    if (is_another_day(&tm, &g_[level].ts))
+    if (g_rotate_trigger(&tm, &g_[level].ts, g_[level].filesize)) {
         __new_log_level_file(level, &tm);
+
+        g_[level].ts.tm_hour = tm.tm_hour;
+        g_[level].ts.tm_mday = tm.tm_mday;
+        g_[level].ts.tm_mon = tm.tm_mon;
+        g_[level].ts.tm_year = tm.tm_year;
+    }
 
     len = sprintf(g_[level].buf, "%s %s\t", timestr, extra_info);
     vsnprintf(g_[level].buf + len, MAX_LOG_LEN - len, fmt, args);
-    fprintf(g_[level].fp, "%s\n", g_[level].buf);
+    len = fprintf(g_[level].fp, "%s\n", g_[level].buf);
+
+    g_[level].filesize += len;
 
     pthread_mutex_unlock(&g_[level].lock);
 }
@@ -165,40 +182,147 @@ void __log_fatal(const char* filename, int line, const char* fmt, ...)
 
 /* ------------------------------------------------------------------------- */
 
-static inline void path_buffer_init(const char* prefix)
+/* all possible combinations of rotating conditions */
+
+static int trigger_size(const struct tm* current, const struct log_tm* old,
+                        unsigned long filesize)
+{
+    return (filesize >= g_max_file_size);
+}
+
+static void filename_size(char* buf, int level, const struct tm* ts)
+{
+    sprintf(buf, "%04d-%02d-%02d_%02d:%02d:%02d.%s",
+            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+            ts->tm_hour, ts->tm_min, ts->tm_sec,
+            log_level_str_lower[level]);
+}
+
+static int trigger_hour(const struct tm* current, const struct log_tm* old,
+                        unsigned long filesize)
+{
+    if ((old->tm_hour == current->tm_hour) &&
+        (old->tm_mday == current->tm_mday) &&
+        (old->tm_mon == current->tm_mon) &&
+        (old->tm_year == current->tm_year))
+        return 0;
+
+    return 1;
+}
+
+static void filename_hour(char* buf, int level, const struct tm* ts)
+{
+    sprintf(buf, "%04d-%02d-%02d_%02d.%s",
+            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday, ts->tm_hour,
+            log_level_str_lower[level]);
+}
+
+static int trigger_day(const struct tm* current, const struct log_tm* old,
+                       unsigned long filesize)
+{
+    if ((old->tm_mday == current->tm_mday) &&
+        (old->tm_mon == current->tm_mon) &&
+        (old->tm_year == current->tm_year))
+        return 0;
+
+    return 1;
+}
+
+static void filename_day(char* buf, int level, const struct tm* ts)
+{
+    sprintf(buf, "%04d-%02d-%02d.%s",
+            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+            log_level_str_lower[level]);
+}
+
+static int trigger_size_hour(const struct tm* current,
+                             const struct log_tm* old, unsigned long filesize)
+{
+    return (trigger_size(current, old, filesize) ||
+            trigger_hour(current, old, filesize));
+}
+
+static void filename_size_hour(char* buf, int level, const struct tm* ts)
+{
+    filename_size(buf, level, ts);
+}
+
+static int trigger_size_day(const struct tm* current,
+                            const struct log_tm* old, unsigned long filesize)
+{
+    return (trigger_size(current, old, filesize) ||
+            trigger_day(current, old, filesize));
+}
+
+static void filename_size_day(char* buf, int level, const struct tm* ts)
+{
+    filename_size(buf, level, ts);
+}
+
+static inline void set_global_functions(unsigned flags)
+{
+    switch (flags & LOG_ROTATE_FLAG_MASK) {
+
+        case LOG_ROTATE_BY_SIZE:
+            g_rotate_trigger = trigger_size;
+            g_get_filename = filename_size;
+        break;
+
+        case LOG_ROTATE_PER_HOUR:
+        case LOG_ROTATE_PER_HOUR | LOG_ROTATE_PER_DAY:
+            g_rotate_trigger = trigger_hour;
+            g_get_filename = filename_hour;
+        break;
+
+        case LOG_ROTATE_PER_DAY:
+            g_rotate_trigger = trigger_day;
+            g_get_filename = filename_day;
+        break;
+
+        case LOG_ROTATE_BY_SIZE | LOG_ROTATE_PER_HOUR:
+        case LOG_ROTATE_BY_SIZE | LOG_ROTATE_PER_HOUR | LOG_ROTATE_PER_DAY:
+            g_rotate_trigger = trigger_size_hour;
+            g_get_filename = filename_size_hour;
+        break;
+
+        case LOG_ROTATE_BY_SIZE | LOG_ROTATE_PER_DAY:
+            g_rotate_trigger = trigger_size_day;
+            g_get_filename = filename_size_day;
+        break;
+
+        default:
+            g_rotate_trigger = trigger_day;
+            g_get_filename = filename_day;
+    }
+}
+
+/* ------------------------------------------------------------------------- */
+
+static inline void path_init(const char* prefix, int max_prefix_len)
 {
     g_path_prefix_len = strlen(prefix);
-    if (g_path_prefix_len > MAX_PATH_PREFIX_LEN) {
+    if (g_path_prefix_len > max_prefix_len) {
         fprintf(stderr, "prefix len is greater than %d, truncated.\n",
-                MAX_PATH_PREFIX_LEN);
-        g_path_prefix_len = MAX_PATH_PREFIX_LEN;
+                max_prefix_len);
+        g_path_prefix_len = max_prefix_len;
     }
 
     memcpy(g_path, prefix, g_path_prefix_len);
 }
 
-static inline void current_date(struct tm* ts)
-{
-    time_t t;
-
-    time(&t);
-    localtime_r(&t, ts);
-}
-
-int log_init(const char* prefix)
+int log_init(const char* prefix, unsigned flags, unsigned int max_megabytes)
 {
     int i;
-    struct tm ts;
-
-    path_buffer_init(prefix);
 
     for (i = 0; i < LOG_LEVEL_MAX; ++i)
         pthread_mutex_init(&g_[i].lock, NULL);
 
-    current_date(&ts);
+    g_max_file_size = max_megabytes << 20;
 
-    for (i = 0; i < LOG_LEVEL_MAX; ++i)
-        __new_log_level_file(i, &ts);
+    /* set trigger functions according to flags */
+    set_global_functions(flags);
+
+    path_init(prefix, MAX_PATH_PREFIX_LEN);
 
     return 0;
 }

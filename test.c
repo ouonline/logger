@@ -3,7 +3,7 @@
 int main(void)
 {
     const char* str = "Hello, world!";
-    log_init("ouonline.");
+    log_init("ouonline.", LOG_ROTATE_BY_SIZE, 0);
 
     log_debug("str -> %s.", str);
     log_info("str -> %s.", str);
