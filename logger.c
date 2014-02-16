@@ -9,8 +9,8 @@
 
 /* ------------------------------------------------------------------------- */
 
-#define LOG_LEVEL_USER      0
-#define LOG_LEVEL_DEBUG     1
+#define LOG_LEVEL_DEBUG     0
+#define LOG_LEVEL_USER      1
 #define LOG_LEVEL_INFO      2
 #define LOG_LEVEL_WARNING   3
 #define LOG_LEVEL_ERROR     4
@@ -18,7 +18,7 @@
 #define LOG_LEVEL_MAX       6
 
 static const char* log_level_str_lower[] = {
-    "user", "debug", "info", "warning", "error", "fatal",
+    "debug", "user", "info", "warning", "error", "fatal",
 };
 
 struct log_tm {
@@ -126,6 +126,11 @@ static void generic_logger(int level, const char* extra_info,
     len = fprintf(g_[level].fp, "%s\n", g_[level].buf);
 
     g_[level].filesize += len;
+
+#ifndef NDEBUG
+    if (level == LOG_LEVEL_DEBUG)
+        fprintf(stderr, "%s\n", g_[LOG_LEVEL_DEBUG].buf);
+#endif
 
     pthread_mutex_unlock(&g_[level].lock);
 }
