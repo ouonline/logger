@@ -1,22 +1,24 @@
 CC := gcc
 
 ifeq ($(release), y)
-    CFLAGS := -O2 -Wall -Werror -DNDEBUG
+    CFLAGS := -O2 -DNDEBUG
 else
-    CFLAGS := -g -Wall -Werror
+    CFLAGS := -g
 endif
+
+CFLAGS := $(CFLAGS) -Wall -Werror
 
 LIBS := -lpthread
 
 OBJS := $(patsubst %c, %o, $(wildcard *.c))
 
-TARGET := log-test
+TARGET := test_logger
 
 .PHONY: all clean
 
 all: $(OBJS) $(TARGET)
 
-log-test: $(OBJS)
+$(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
 
 .c.o:
