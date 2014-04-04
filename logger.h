@@ -1,33 +1,53 @@
 #ifndef __LOGGER_H__
 #define __LOGGER_H__
 
-/* flag definitions for log_init() */
-#define LOG_ROTATE_BY_SIZE      0x1
-#define LOG_ROTATE_PER_HOUR     0x2
-#define LOG_ROTATE_PER_DAY      0x4
+struct logger {
+    struct logger_impl* handler;
+};
 
-#define LOG_ROTATE_FLAG_MASK    0x7
-#define LOG_ROTATE_DEFAULT      LOG_ROTATE_PER_DAY
+/* flag definitions for logger_init() */
+#define LOGGER_ROTATE_BY_SIZE       0x1
+#define LOGGER_ROTATE_PER_HOUR      0x2
+#define LOGGER_ROTATE_PER_DAY       0x4
 
-int log_init(const char* prefix, unsigned flags, unsigned int max_megabytes);
+#define LOGGER_ROTATE_FLAG_MASK     0x7
+#define LOGGER_ROTATE_DEFAULT       LOG_ROTATE_PER_DAY
+
+int logger_init(struct logger*, const char* prefix,
+                unsigned int flags, unsigned int max_megabytes);
+void logger_destroy(struct logger*);
 
 #ifdef NDEBUG
-#define log_debug(fmt, ...)
+#define logger_debug(lp, fmt, ...)
 #else
-void __log_debug(const char* filename, int line, const char* fmt, ...);
-#define log_debug(fmt, ...)     __log_debug(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define logger_debug(lp, fmt, ...)      __logger_debug(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #endif
 
-#define log_user(fmt, ...)      __log_user(fmt, ##__VA_ARGS__) /* user specific logs */
-#define log_info(fmt, ...)      __log_info(fmt, ##__VA_ARGS__)
-#define log_warning(fmt, ...)   __log_warning(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define log_error(fmt, ...)     __log_error(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define log_fatal(fmt, ...)     __log_fatal(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define logger_user(lp, fmt, ...)       __logger_user(lp, fmt, ##__VA_ARGS__)
+#define logger_info(lp, fmt, ...)       __logger_info(lp, fmt, ##__VA_ARGS__)
+#define logger_warning(lp, fmt, ...)    __logger_warning(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define logger_error(lp, fmt, ...)      __logger_error(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define logger_fatal(lp, fmt, ...)      __logger_fatal(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
-void __log_user(const char* fmt, ...);
-void __log_info(const char* fmt, ...);
-void __log_warning(const char* filename, int line, const char* fmt, ...);
-void __log_error(const char* filename, int line, const char* fmt, ...);
-void __log_fatal(const char* filename, int line, const char* fmt, ...);
+/* ------------------------------------------------------------------------- */
+
+#ifdef NDEBUG
+static inline void __logger_debug(struct logger* l,
+                                  const char* filename, int line,
+                                  const char* fmt, ...)
+{}
+#else
+void __logger_debug(struct logger*, const char* filename, int line,
+                    const char* fmt, ...);
+#endif
+
+void __logger_user(struct logger*, const char* fmt, ...);
+void __logger_info(struct logger*, const char* fmt, ...);
+void __logger_warning(struct logger*, const char* filename, int line,
+                      const char* fmt, ...);
+void __logger_error(struct logger*, const char* filename, int line,
+                    const char* fmt, ...);
+void __logger_fatal(struct logger*, const char* filename, int line,
+                    const char* fmt, ...);
 
 #endif

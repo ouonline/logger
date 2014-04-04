@@ -1,5 +1,5 @@
 #include <pthread.h>
-#include "logger.h"
+#include "global_logger.h"
 
 #define N 10
 
@@ -20,7 +20,7 @@ int main(void)
     pthread_t pid[N];
     const char* str = "Hello, world!";
 
-    log_init("ouonline.", LOG_ROTATE_BY_SIZE | LOG_ROTATE_PER_HOUR, 128);
+    log_init("ouonline.", LOGGER_ROTATE_BY_SIZE | LOGGER_ROTATE_PER_HOUR, 64);
 
     for (i = 0; i < N; ++i)
         pthread_create(&pid[i], NULL, print, (void*)str);
