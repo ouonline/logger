@@ -422,10 +422,12 @@ void logger_destroy(struct logger* l)
         return;
 
     for (i = 0; i < LOG_LEVEL_MAX; ++i) {
-        if (handler->o_o[i].fp && handler->o_o[i].fp != stdout &&
-            handler->o_o[i].fp != stderr)
-            fclose(handler->o_o[i].fp);
-        pthread_mutex_destroy(&handler->o_o[i].lock);
+        struct logger_info* logger = &handler->o_o[i];
+
+        if (logger->fp && logger->fp != stdout && logger->fp != stderr)
+            fclose(logger->fp);
+
+        pthread_mutex_destroy(&logger->lock);
     }
 
     free(handler);
