@@ -34,17 +34,17 @@ struct log_tm {
  *     - <prefix>YYYY-MM-DD.<level>
  *     - <prefix>YYYY-MM-DD_hh.<level>
  *     - <prefix>YYYY-MM-DD_hh:mm:ss.<level>
- * max(strlen(level_str[])) == strlen("warning") == 7
  *
- * PATH_BUFLEN should be >= 28 */
+ * strlen("YYYY-MM-DD_hh:mm:ss.") == 20
+ * max(strlen(log_level_str[])) == strlen("warning") == 7
+ *
+ * PATH_BUFLEN should be >= 28 (including trailing '\0') */
 
 #define PATH_BUFLEN 1024
 
-#define MAX_PATH_PREFIX_LEN (PATH_BUFLEN \
+#define PATH_PREFIX_BUFLEN  (PATH_BUFLEN \
                              - sizeof(unsigned long) \
-                             - sizeof(void*) - sizeof(void*) \
-                             - sizeof(unsigned int)) \
-                             - 1
+                             - sizeof(void*) + sizeof(void*))
 
 /* variables that will be initialized in logger_init() */
 struct logger_var {
@@ -54,8 +54,7 @@ struct logger_var {
                           unsigned long max_file_size, unsigned long filesize);
     void (*get_filename)(char* buf, int level, const struct tm* ts);
 
-    unsigned int path_prefix_len;
-    char path_prefix[MAX_PATH_PREFIX_LEN];
+    char path_prefix[PATH_PREFIX_BUFLEN];
 } __attribute__((packed));
 
 #define MAX_LOG_LEN (4096 \
@@ -65,7 +64,7 @@ struct logger_var {
                      - sizeof(unsigned long) \
                      - sizeof(pthread_mutex_t))
 
-/* logging info */
+/* sizeof(logger_info) == 4096 */
 struct logger_info {
     FILE* fp;
     struct log_tm ts; /* timestamp of last write */
@@ -86,6 +85,7 @@ static void __new_log_level_file(struct logger_info* logger,
                                  struct logger_var* var,
                                  const struct tm* ts)
 {
+    int len;
     char path[PATH_BUFLEN];
 
     logger->filesize = 0;
@@ -93,8 +93,8 @@ static void __new_log_level_file(struct logger_info* logger,
     if (logger->fp && logger->fp != stdout && logger->fp != stderr)
         fclose(logger->fp);
 
-    sprintf(path, var->path_prefix);
-    var->get_filename(path + var->path_prefix_len, logger->level, ts);
+    len = sprintf(path, var->path_prefix);
+    var->get_filename(path + len, logger->level, ts);
 
     logger->fp = fopen(path, "a");
     if (!logger->fp) {
@@ -366,15 +366,16 @@ static inline void logger_var_set_path_prefix(struct logger_var* var,
                                               const char* prefix,
                                               unsigned int max_prefix_len)
 {
-    var->path_prefix_len = strlen(prefix);
+    unsigned int path_prefix_len = strlen(prefix);
 
-    if (var->path_prefix_len > max_prefix_len) {
+    if (path_prefix_len > max_prefix_len) {
         fprintf(stderr, "prefix len is greater than %d, truncated.\n",
                 max_prefix_len);
-        var->path_prefix_len = max_prefix_len;
+        path_prefix_len = max_prefix_len;
     }
 
-    memcpy(var->path_prefix, prefix, var->path_prefix_len);
+    memcpy(var->path_prefix, prefix, path_prefix_len);
+    var->path_prefix[path_prefix_len] = '\0';
 }
 
 static inline void logger_var_init(struct logger_var* var, const char* prefix,
@@ -383,7 +384,9 @@ static inline void logger_var_init(struct logger_var* var, const char* prefix,
 {
     var->max_file_size = max_megabytes << 20;
     logger_var_set_func(var, flags);
-    logger_var_set_path_prefix(var, prefix, MAX_PATH_PREFIX_LEN);
+    logger_var_set_path_prefix(var, prefix,
+                               PATH_PREFIX_BUFLEN > PATH_BUFLEN - 27 ?
+                               PATH_BUFLEN - 27 - 1 : PATH_PREFIX_BUFLEN - 1);
 }
 
 /* ------------------------------------------------------------------------- */
