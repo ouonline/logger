@@ -31,12 +31,7 @@ void logger_destroy(struct logger*);
 
 /* ------------------------------------------------------------------------- */
 
-#ifdef NDEBUG
-static inline void __logger_debug(struct logger* l,
-                                  const char* filename, int line,
-                                  const char* fmt, ...)
-{}
-#else
+#ifndef NDEBUG
 void __logger_debug(struct logger*, const char* filename, int line,
                     const char* fmt, ...);
 #endif
