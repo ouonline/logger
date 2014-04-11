@@ -93,7 +93,7 @@ static void __new_log_level_file(struct logger_info* logger,
     if (logger->fp && logger->fp != stdout && logger->fp != stderr)
         fclose(logger->fp);
 
-    len = sprintf(path, var->path_prefix);
+    len = sprintf(path, "%s", var->path_prefix);
     var->get_filename(path + len, logger->level, ts);
 
     logger->fp = fopen(path, "a");
