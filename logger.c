@@ -44,7 +44,7 @@ struct log_tm {
 
 #define PATH_PREFIX_BUFLEN  (PATH_BUFLEN \
                              - sizeof(unsigned long) \
-                             - sizeof(void*) + sizeof(void*))
+                             - sizeof(void*) - sizeof(void*))
 
 /* variables that will be initialized in logger_init() */
 struct logger_var {
