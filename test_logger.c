@@ -8,8 +8,10 @@ static void* print(void* arg)
     int i, j;
 
     for (i = 0; i < 999; ++i)
-        for (j = 0; j < 9999; ++j)
+        for (j = 0; j < 9999; ++j) {
             log_debug("%s", (const char*)arg);
+            log_warning("%s", (const char*)arg);
+        }
 
     return NULL;
 }

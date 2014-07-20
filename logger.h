@@ -23,8 +23,8 @@ void logger_destroy(struct logger*);
 #define logger_debug(lp, fmt, ...)      __logger_debug(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #endif
 
-#define logger_user(lp, fmt, ...)       __logger_user(lp, fmt, ##__VA_ARGS__) /* user specific logs */
-#define logger_info(lp, fmt, ...)       __logger_info(lp, fmt, ##__VA_ARGS__)
+#define logger_user(lp, fmt, ...)       __logger_user(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__) /* user specific logs */
+#define logger_info(lp, fmt, ...)       __logger_info(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #define logger_warning(lp, fmt, ...)    __logger_warning(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #define logger_error(lp, fmt, ...)      __logger_error(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #define logger_fatal(lp, fmt, ...)      __logger_fatal(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
@@ -36,8 +36,10 @@ void __logger_debug(struct logger*, const char* filename, int line,
                     const char* fmt, ...);
 #endif
 
-void __logger_user(struct logger*, const char* fmt, ...);
-void __logger_info(struct logger*, const char* fmt, ...);
+void __logger_user(struct logger*, const char* filename, int line,
+                   const char* fmt, ...);
+void __logger_info(struct logger*, const char* filename, int line,
+                   const char* fmt, ...);
 void __logger_warning(struct logger*, const char* filename, int line,
                       const char* fmt, ...);
 void __logger_error(struct logger*, const char* filename, int line,

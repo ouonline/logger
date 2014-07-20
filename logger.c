@@ -115,7 +115,7 @@ static inline void current_datetime(char *buf, int size, struct tm* tp)
 
     gettimeofday(&tv, NULL);
     localtime_r(&tv.tv_sec, tp);
-    len = strftime(buf, size, "%F %T", tp);
+    len = strftime(buf, size, "%F_%T", tp);
     sprintf(buf + len, ".%06ld", tv.tv_usec);
 }
 
@@ -124,7 +124,7 @@ static inline void current_datetime(char *buf, int size, struct tm* tp)
 
 static void generic_logger(struct logger_info* logger,
                            struct logger_var* var,
-                           const char* extra_info,
+                           const char* filename, int line, /* extra info */
                            const char* fmt, va_list args)
 {
     int len;
@@ -145,9 +145,9 @@ static void generic_logger(struct logger_info* logger,
         logger->ts.tm_year = tm.tm_year;
     }
 
-    len = sprintf(logger->buf, "[%s]\t%s %ld %s\t",
+    len = sprintf(logger->buf, "[%s] [%s] [%lu] [%s:%u]\t",
                   log_level_str[logger->level], timestr,
-                  syscall(__NR_gettid), extra_info);
+                  syscall(__NR_gettid), filename, line);
     vsnprintf(logger->buf + len, MAX_LOG_LEN - len, fmt, args);
 
     len = fprintf(logger->fp, "%s\n", logger->buf);
@@ -158,41 +158,6 @@ static void generic_logger(struct logger_info* logger,
     pthread_mutex_unlock(&logger->lock);
 }
 
-void __logger_user(struct logger* l, const char* fmt, ...)
-{
-    va_list args;
-    struct logger_impl* handler = l->handler;
-
-    va_start(args, fmt);
-    generic_logger(&handler->o_o[LOG_LEVEL_USER], &handler->var,
-                   "", fmt, args);
-    va_end(args);
-}
-
-void __logger_info(struct logger* l, const char* fmt, ...)
-{
-    va_list args;
-    struct logger_impl* handler = l->handler;
-
-    va_start(args, fmt);
-    generic_logger(&handler->o_o[LOG_LEVEL_INFO], &handler->var,
-                   "", fmt, args);
-    va_end(args);
-}
-
-#define MAX_POS_INFO_LEN 128
-
-static inline void log_with_pos_info(struct logger_info* logger,
-                                     struct logger_var* var,
-                                     const char* filename, int line,
-                                     const char* fmt, va_list args)
-{
-    char pos_info[MAX_POS_INFO_LEN];
-
-    snprintf(pos_info, MAX_POS_INFO_LEN, "%s:%d", filename, line);
-    generic_logger(logger, var, pos_info, fmt, args);
-}
-
 #ifndef NDEBUG
 void __logger_debug(struct logger* l, const char* filename, int line,
                     const char* fmt, ...)
@@ -201,11 +166,35 @@ void __logger_debug(struct logger* l, const char* filename, int line,
     struct logger_impl* handler = l->handler;
 
     va_start(args, fmt);
-    log_with_pos_info(&handler->o_o[LOG_LEVEL_DEBUG], &handler->var,
-                      filename, line, fmt, args);
+    generic_logger(&handler->o_o[LOG_LEVEL_DEBUG], &handler->var,
+                   filename, line, fmt, args);
     va_end(args);
 }
 #endif
+
+void __logger_user(struct logger* l, const char* filename, int line,
+                   const char* fmt, ...)
+{
+    va_list args;
+    struct logger_impl* handler = l->handler;
+
+    va_start(args, fmt);
+    generic_logger(&handler->o_o[LOG_LEVEL_USER], &handler->var,
+                   filename, line, fmt, args);
+    va_end(args);
+}
+
+void __logger_info(struct logger* l, const char* filename, int line,
+                   const char* fmt, ...)
+{
+    va_list args;
+    struct logger_impl* handler = l->handler;
+
+    va_start(args, fmt);
+    generic_logger(&handler->o_o[LOG_LEVEL_INFO], &handler->var,
+                   filename, line, fmt, args);
+    va_end(args);
+}
 
 void __logger_warning(struct logger* l, const char* filename, int line,
                       const char* fmt, ...)
@@ -214,8 +203,8 @@ void __logger_warning(struct logger* l, const char* filename, int line,
     struct logger_impl* handler = l->handler;
 
     va_start(args, fmt);
-    log_with_pos_info(&handler->o_o[LOG_LEVEL_WARNING], &handler->var,
-                      filename, line, fmt, args);
+    generic_logger(&handler->o_o[LOG_LEVEL_WARNING], &handler->var,
+                   filename, line, fmt, args);
     va_end(args);
 }
 
@@ -226,8 +215,8 @@ void __logger_error(struct logger* l, const char* filename, int line,
     struct logger_impl* handler = l->handler;
 
     va_start(args, fmt);
-    log_with_pos_info(&handler->o_o[LOG_LEVEL_ERROR], &handler->var,
-                      filename, line, fmt, args);
+    generic_logger(&handler->o_o[LOG_LEVEL_ERROR], &handler->var,
+                   filename, line, fmt, args);
     va_end(args);
 }
 
@@ -238,8 +227,8 @@ void __logger_fatal(struct logger* l, const char* filename, int line,
     struct logger_impl* handler = l->handler;
 
     va_start(args, fmt);
-    log_with_pos_info(&handler->o_o[LOG_LEVEL_FATAL], &handler->var,
-                      filename, line, fmt, args);
+    generic_logger(&handler->o_o[LOG_LEVEL_FATAL], &handler->var,
+                   filename, line, fmt, args);
     va_end(args);
 }
 
@@ -423,7 +412,7 @@ int logger_init(struct logger* l, const char* prefix,
     for (i = 0; i < LOG_LEVEL_MAX; ++i) {
         struct logger_info* logger = &handler->o_o[i];
 
-        if (i <= LOG_LEVEL_WARNING)
+        if (i <= LOG_LEVEL_INFO)
             logger->fp = stdout;
         else
             logger->fp = stderr;
