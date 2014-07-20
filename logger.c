@@ -145,7 +145,8 @@ static void generic_logger(struct logger_info* logger,
         logger->ts.tm_year = tm.tm_year;
     }
 
-    len = sprintf(logger->buf, "%s %ld %s\t", timestr,
+    len = sprintf(logger->buf, "[%s]\t%s %ld %s\t",
+                  log_level_str[logger->level], timestr,
                   syscall(__NR_gettid), extra_info);
     vsnprintf(logger->buf + len, MAX_LOG_LEN - len, fmt, args);
 
@@ -325,6 +326,17 @@ static inline void filename_size_day(char* buf, int level, const struct tm* ts)
     filename_size(buf, level, ts);
 }
 
+static inline int trigger_none(const struct tm* current,
+                               const struct log_tm* old,
+                               unsigned long max_file_size,
+                               unsigned long filesize)
+{
+    return 0;
+}
+
+static inline void filename_none(char* buf, int level, const struct tm* ts)
+{}
+
 static void logger_var_set_func(struct logger_var* var, unsigned flags)
 {
     switch (flags & LOGGER_ROTATE_FLAG_MASK) {
@@ -382,11 +394,16 @@ static inline void logger_var_init(struct logger_var* var, const char* prefix,
                                    unsigned int flags,
                                    unsigned int max_megabytes)
 {
-    var->max_file_size = max_megabytes << 20;
-    logger_var_set_func(var, flags);
-    logger_var_set_path_prefix(var, prefix,
-                               PATH_PREFIX_BUFLEN > PATH_BUFLEN - 27 ?
-                               PATH_BUFLEN - 27 - 1 : PATH_PREFIX_BUFLEN - 1);
+    if (prefix) {
+        logger_var_set_func(var, flags);
+        var->max_file_size = max_megabytes << 20;
+        logger_var_set_path_prefix(var, prefix,
+                                   PATH_PREFIX_BUFLEN > PATH_BUFLEN - 27 ?
+                                   PATH_BUFLEN - 27 - 1 : PATH_PREFIX_BUFLEN - 1);
+    } else {
+        var->rotate_trigger = trigger_none;
+        var->get_filename = filename_none;
+    }
 }
 
 /* ------------------------------------------------------------------------- */
@@ -405,6 +422,11 @@ int logger_init(struct logger* l, const char* prefix,
 
     for (i = 0; i < LOG_LEVEL_MAX; ++i) {
         struct logger_info* logger = &handler->o_o[i];
+
+        if (i <= LOG_LEVEL_WARNING)
+            logger->fp = stdout;
+        else
+            logger->fp = stderr;
 
         logger->level = i;
         pthread_mutex_init(&logger->lock, NULL);
