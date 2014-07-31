@@ -5,17 +5,33 @@
 
 #include "logger.h"
 
-extern struct logger o_o;
-
 /* see logger.h for flag definitions */
-#define log_init(prefix, flags, max_megabytes) \
-    logger_init(&o_o, prefix, flags, max_megabytes)
+int log_init(const char* prefix, unsigned int flags,
+             unsigned int max_megabytes);
+void log_destroy(void);
 
-#define log_debug(fmt, ...)     logger_debug(&o_o, fmt, ##__VA_ARGS__)
-#define log_user(fmt, ...)      logger_user(&o_o, fmt, ##__VA_ARGS__)
-#define log_info(fmt, ...)      logger_info(&o_o, fmt, ##__VA_ARGS__)
-#define log_warning(fmt, ...)   logger_warning(&o_o, fmt, ##__VA_ARGS__)
-#define log_error(fmt, ...)     logger_error(&o_o, fmt, ##__VA_ARGS__)
-#define log_fatal(fmt, ...)     logger_fatal(&o_o, fmt, ##__VA_ARGS__)
+#ifdef NDEBUG
+#define log_debug(fmt, ...)
+#else
+#define log_debug(fmt, ...)     __log_debug(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#endif
+
+#define log_user(fmt, ...)      __log_user(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_info(fmt, ...)      __log_info(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_warning(fmt, ...)   __log_warning(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_error(fmt, ...)     __log_error(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_fatal(fmt, ...)     __log_fatal(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
+
+/* ------------------------------------------------------------------------- */
+
+#ifndef NDEBUG
+void __log_debug(const char* filename, int line, const char* fmt, ...);
+#endif
+
+void __log_user(const char* filename, int line, const char* fmt, ...);
+void __log_info(const char* filename, int line, const char* fmt, ...);
+void __log_warning(const char* filename, int line, const char* fmt, ...);
+void __log_error(const char* filename, int line, const char* fmt, ...);
+void __log_fatal(const char* filename, int line, const char* fmt, ...);
 
 #endif
