@@ -158,35 +158,27 @@ static void generic_logger(struct logger_info* logger,
     pthread_mutex_unlock(&logger->lock);
 }
 
-#ifndef NDEBUG
-void __vlogger_debug(struct logger* l, const char* filename, int line,
-                     const char* fmt, va_list args)
+static inline void __vlogger(struct logger* l, int level,
+                             const char* filename, int line,
+                             const char* fmt, va_list args)
 {
     struct logger_impl* handler = l->handler;
 
-    generic_logger(&handler->o_o[LOG_LEVEL_DEBUG], &handler->var,
+    generic_logger(&handler->o_o[level], &handler->var,
                    filename, line, fmt, args);
 }
 
+#ifndef NDEBUG
 void __logger_debug(struct logger* l, const char* filename, int line,
                     const char* fmt, ...)
 {
     va_list args;
 
     va_start(args, fmt);
-    __vlogger_debug(l, filename, line, fmt, args);
+    __vlogger(l, LOG_LEVEL_DEBUG, filename, line, fmt, args);
     va_end(args);
 }
 #endif
-
-void __vlogger_user(struct logger* l, const char* filename, int line,
-                    const char* fmt, va_list args)
-{
-    struct logger_impl* handler = l->handler;
-
-    generic_logger(&handler->o_o[LOG_LEVEL_USER], &handler->var,
-                   filename, line, fmt, args);
-}
 
 void __logger_user(struct logger* l, const char* filename, int line,
                    const char* fmt, ...)
@@ -194,17 +186,8 @@ void __logger_user(struct logger* l, const char* filename, int line,
     va_list args;
 
     va_start(args, fmt);
-    __vlogger_user(l, filename, line, fmt, args);
+    __vlogger(l, LOG_LEVEL_USER, filename, line, fmt, args);
     va_end(args);
-}
-
-void __vlogger_info(struct logger* l, const char* filename, int line,
-                    const char* fmt, va_list args)
-{
-    struct logger_impl* handler = l->handler;
-
-    generic_logger(&handler->o_o[LOG_LEVEL_INFO], &handler->var,
-                   filename, line, fmt, args);
 }
 
 void __logger_info(struct logger* l, const char* filename, int line,
@@ -213,17 +196,8 @@ void __logger_info(struct logger* l, const char* filename, int line,
     va_list args;
 
     va_start(args, fmt);
-    __vlogger_info(l, filename, line, fmt, args);
+    __vlogger(l, LOG_LEVEL_INFO, filename, line, fmt, args);
     va_end(args);
-}
-
-void __vlogger_warning(struct logger* l, const char* filename, int line,
-                       const char* fmt, va_list args)
-{
-    struct logger_impl* handler = l->handler;
-
-    generic_logger(&handler->o_o[LOG_LEVEL_WARNING], &handler->var,
-                   filename, line, fmt, args);
 }
 
 void __logger_warning(struct logger* l, const char* filename, int line,
@@ -232,17 +206,8 @@ void __logger_warning(struct logger* l, const char* filename, int line,
     va_list args;
 
     va_start(args, fmt);
-    __vlogger_warning(l, filename, line, fmt, args);
+    __vlogger(l, LOG_LEVEL_WARNING, filename, line, fmt, args);
     va_end(args);
-}
-
-void __vlogger_error(struct logger* l, const char* filename, int line,
-                     const char* fmt, va_list args)
-{
-    struct logger_impl* handler = l->handler;
-
-    generic_logger(&handler->o_o[LOG_LEVEL_ERROR], &handler->var,
-                   filename, line, fmt, args);
 }
 
 void __logger_error(struct logger* l, const char* filename, int line,
@@ -251,17 +216,8 @@ void __logger_error(struct logger* l, const char* filename, int line,
     va_list args;
 
     va_start(args, fmt);
-    __vlogger_error(l, filename, line, fmt, args);
+    __vlogger(l, LOG_LEVEL_ERROR, filename, line, fmt, args);
     va_end(args);
-}
-
-void __vlogger_fatal(struct logger* l, const char* filename, int line,
-                     const char* fmt, va_list args)
-{
-    struct logger_impl* handler = l->handler;
-
-    generic_logger(&handler->o_o[LOG_LEVEL_FATAL], &handler->var,
-                   filename, line, fmt, args);
 }
 
 void __logger_fatal(struct logger* l, const char* filename, int line,
@@ -270,7 +226,7 @@ void __logger_fatal(struct logger* l, const char* filename, int line,
     va_list args;
 
     va_start(args, fmt);
-    __vlogger_fatal(l, filename, line, fmt, args);
+    __vlogger(l, LOG_LEVEL_FATAL, filename, line, fmt, args);
     va_end(args);
 }
 
@@ -488,4 +444,77 @@ void logger_destroy(struct logger* l)
 
     free(handler);
     l->handler = NULL;
+}
+
+/* ------------------------------------------------------------------------- */
+
+/* singleton logger implementation */
+
+static struct logger o_o;
+
+int log_init(const char* prefix, unsigned int flags,
+             unsigned int max_megabytes)
+{
+    return logger_init(&o_o, prefix, flags, max_megabytes);
+}
+
+void log_destroy(void)
+{
+    logger_destroy(&o_o);
+}
+
+#ifndef NDEBUG
+void __log_debug(const char* filename, int line, const char* fmt, ...)
+{
+    va_list args;
+
+    va_start(args, fmt);
+    __vlogger(&o_o, LOG_LEVEL_DEBUG, filename, line, fmt, args);
+    va_end(args);
+}
+#endif
+
+void __log_user(const char* filename, int line, const char* fmt, ...)
+{
+    va_list args;
+
+    va_start(args, fmt);
+    __vlogger(&o_o, LOG_LEVEL_USER, filename, line, fmt, args);
+    va_end(args);
+}
+
+void __log_info(const char* filename, int line, const char* fmt, ...)
+{
+    va_list args;
+
+    va_start(args, fmt);
+    __vlogger(&o_o, LOG_LEVEL_INFO, filename, line, fmt, args);
+    va_end(args);
+}
+
+void __log_warning(const char* filename, int line, const char* fmt, ...)
+{
+    va_list args;
+
+    va_start(args, fmt);
+    __vlogger(&o_o, LOG_LEVEL_WARNING, filename, line, fmt, args);
+    va_end(args);
+}
+
+void __log_error(const char* filename, int line, const char* fmt, ...)
+{
+    va_list args;
+
+    va_start(args, fmt);
+    __vlogger(&o_o, LOG_LEVEL_ERROR, filename, line, fmt, args);
+    va_end(args);
+}
+
+void __log_fatal(const char* filename, int line, const char* fmt, ...)
+{
+    va_list args;
+
+    va_start(args, fmt);
+    __vlogger(&o_o, LOG_LEVEL_FATAL, filename, line, fmt, args);
+    va_end(args);
 }
