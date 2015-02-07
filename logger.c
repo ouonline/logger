@@ -127,7 +127,6 @@ static void generic_logger(struct logger_info* logger,
                            const char* filename, int line, /* extra info */
                            const char* fmt, va_list args)
 {
-    int len;
     struct tm tm;
     char timestr[32];
 
@@ -145,15 +144,12 @@ static void generic_logger(struct logger_info* logger,
         logger->ts.tm_year = tm.tm_year;
     }
 
-    len = sprintf(logger->buf, "[%s] [%s] [%lu] [%s:%u]\t",
-                  log_level_str[logger->level], timestr,
-                  syscall(__NR_gettid), filename, line);
-    vsnprintf(logger->buf + len, MAX_LOG_LEN - len, fmt, args);
-
-    len = fprintf(logger->fp, "%s\n", logger->buf);
+    vsnprintf(logger->buf, MAX_LOG_LEN, fmt, args);
+    logger->filesize += fprintf(logger->fp, "[%s] [%s] [%lu] [%s:%u]\t%s\n",
+                                log_level_str[logger->level], timestr,
+                                syscall(__NR_gettid), filename, line,
+                                logger->buf);
     fflush(logger->fp); /* flush cache to disk */
-
-    logger->filesize += len;
 
     pthread_mutex_unlock(&logger->lock);
 }
