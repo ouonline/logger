@@ -22,7 +22,7 @@ int main(void)
     pthread_t pid[N];
     const char* str = "Hello, world!";
 
-    log_init("ouonline.", LOGGER_ROTATE_BY_SIZE | LOGGER_ROTATE_PER_HOUR, 64);
+    log_init(".", "ouonline", LOGGER_ROTATE_BY_SIZE | LOGGER_ROTATE_PER_HOUR, 64);
 
     for (i = 0; i < N; ++i)
         pthread_create(&pid[i], NULL, print, (void*)str);

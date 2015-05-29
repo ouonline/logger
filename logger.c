@@ -11,7 +11,7 @@
 /* ------------------------------------------------------------------------- */
 
 #define LOG_LEVEL_DEBUG     0
-#define LOG_LEVEL_USER      1
+#define LOG_LEVEL_MISC      1
 #define LOG_LEVEL_INFO      2
 #define LOG_LEVEL_WARNING   3
 #define LOG_LEVEL_ERROR     4
@@ -19,7 +19,7 @@
 #define LOG_LEVEL_MAX       6
 
 static const char* log_level_str[] = {
-    "debug", "user", "info", "warning", "error", "fatal",
+    "debug", "misc", "info", "warning", "error", "fatal",
 };
 
 /* fields of logging timestamp */
@@ -31,14 +31,15 @@ struct log_tm {
 } __attribute__((packed));
 
 /* log filename may be one of the following forms:
- *     - <prefix>YYYY-MM-DD.<level>
- *     - <prefix>YYYY-MM-DD_hh.<level>
- *     - <prefix>YYYY-MM-DD_hh:mm:ss.<level>
+ *     - <prefix>_YYYYMMDD.<level>
+ *     - <prefix>_YYYYMMDD-hh.<level>
+ *     - <prefix>_YYYYMMDD-hhmmss.<level>
  *
- * strlen("YYYY-MM-DD_hh:mm:ss.") == 20
+ * strlen("_YYYYMMDD_hhmmss.") == 17
  * max(strlen(log_level_str[])) == strlen("warning") == 7
  *
- * PATH_BUFLEN should be >= 28 (including trailing '\0') */
+ * PATH_BUFLEN should be >= 17 + 7 + 1 = 25 (including trailing '\0') */
+#define MIN_PATH_BUFLEN 25
 
 #define PATH_BUFLEN 1024
 
@@ -93,7 +94,7 @@ static void __new_log_level_file(struct logger_info* logger,
     if (logger->fp && logger->fp != stdout && logger->fp != stderr)
         fclose(logger->fp);
 
-    len = sprintf(path, "%s", var->path_prefix);
+    len = sprintf(path, "%s_", var->path_prefix);
     var->get_filename(path + len, logger->level, ts);
 
     logger->fp = fopen(path, "a");
@@ -115,12 +116,9 @@ static inline void current_datetime(char *buf, int size, struct tm* tp)
 
     gettimeofday(&tv, NULL);
     localtime_r(&tv.tv_sec, tp);
-    len = strftime(buf, size, "%F_%T", tp);
+    len = strftime(buf, size, "%F %T", tp);
     sprintf(buf + len, ".%06ld", tv.tv_usec);
 }
-
-#include <unistd.h>
-#include <sys/syscall.h>
 
 static void generic_logger(struct logger_info* logger,
                            struct logger_var* var,
@@ -145,10 +143,8 @@ static void generic_logger(struct logger_info* logger,
     }
 
     vsnprintf(logger->buf, MAX_LOG_LEN, fmt, args);
-    logger->filesize += fprintf(logger->fp, "[%s] [%s] [%lu] [%s:%u]\t%s\n",
-                                log_level_str[logger->level], timestr,
-                                syscall(__NR_gettid), filename, line,
-                                logger->buf);
+    logger->filesize += fprintf(logger->fp, "[%s] [%s:%u]\t%s\n",
+                                timestr, filename, line, logger->buf);
     fflush(logger->fp); /* flush cache to disk */
 
     pthread_mutex_unlock(&logger->lock);
@@ -176,13 +172,13 @@ void __logger_debug(struct logger* l, const char* filename, int line,
 }
 #endif
 
-void __logger_user(struct logger* l, const char* filename, int line,
+void __logger_misc(struct logger* l, const char* filename, int line,
                    const char* fmt, ...)
 {
     va_list args;
 
     va_start(args, fmt);
-    __vlogger(l, LOG_LEVEL_USER, filename, line, fmt, args);
+    __vlogger(l, LOG_LEVEL_MISC, filename, line, fmt, args);
     va_end(args);
 }
 
@@ -240,7 +236,7 @@ static inline int trigger_size(const struct tm* current,
 
 static inline void filename_size(char* buf, int level, const struct tm* ts)
 {
-    sprintf(buf, "%04d-%02d-%02d_%02d:%02d:%02d.%s",
+    sprintf(buf, "%04d%02d%02d-%02d%02d%02d.%s",
             ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
             ts->tm_hour, ts->tm_min, ts->tm_sec,
             log_level_str[level]);
@@ -259,7 +255,7 @@ static inline int trigger_hour(const struct tm* current,
 
 static inline void filename_hour(char* buf, int level, const struct tm* ts)
 {
-    sprintf(buf, "%04d-%02d-%02d_%02d.%s",
+    sprintf(buf, "%04d%02d%02d-%02d.%s",
             ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday, ts->tm_hour,
             log_level_str[level]);
 }
@@ -276,7 +272,7 @@ static inline int trigger_day(const struct tm* current,
 
 static inline void filename_day(char* buf, int level, const struct tm* ts)
 {
-    sprintf(buf, "%04d-%02d-%02d.%s",
+    sprintf(buf, "%04d%02d%02d.%s",
             ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
             log_level_str[level]);
 }
@@ -335,11 +331,6 @@ static void logger_var_set_func(struct logger_var* var, unsigned flags)
             var->get_filename = filename_hour;
         break;
 
-        case LOGGER_ROTATE_PER_DAY:
-            var->rotate_trigger = trigger_day;
-            var->get_filename = filename_day;
-        break;
-
         case LOGGER_ROTATE_BY_SIZE | LOGGER_ROTATE_PER_HOUR:
         case LOGGER_ROTATE_BY_SIZE | LOGGER_ROTATE_PER_HOUR | LOGGER_ROTATE_PER_DAY:
             var->rotate_trigger = trigger_size_hour;
@@ -351,6 +342,7 @@ static void logger_var_set_func(struct logger_var* var, unsigned flags)
             var->get_filename = filename_size_day;
         break;
 
+        case LOGGER_ROTATE_PER_DAY:
         default:
             var->rotate_trigger = trigger_day;
             var->get_filename = filename_day;
@@ -358,10 +350,10 @@ static void logger_var_set_func(struct logger_var* var, unsigned flags)
 }
 
 static inline void logger_var_set_path_prefix(struct logger_var* var,
-                                              const char* prefix,
+                                              const char* dirpath, const char* prefix,
                                               unsigned int max_prefix_len)
 {
-    unsigned int path_prefix_len = strlen(prefix);
+    unsigned int path_prefix_len = strlen(dirpath) + 1 /* '/' */ + strlen(prefix);
 
     if (path_prefix_len > max_prefix_len) {
         fprintf(stderr, "prefix len is greater than %d, truncated.\n",
@@ -369,20 +361,22 @@ static inline void logger_var_set_path_prefix(struct logger_var* var,
         path_prefix_len = max_prefix_len;
     }
 
-    memcpy(var->path_prefix, prefix, path_prefix_len);
-    var->path_prefix[path_prefix_len] = '\0';
+    snprintf(var->path_prefix, path_prefix_len + 1 /* plus trailing '\0' */,
+             "%s/%s", dirpath, prefix);
 }
 
-static inline void logger_var_init(struct logger_var* var, const char* prefix,
+static inline void logger_var_init(struct logger_var* var,
+                                   const char* dirpath, const char* prefix,
                                    unsigned int flags,
                                    unsigned int max_megabytes)
 {
     if (prefix) {
         logger_var_set_func(var, flags);
         var->max_file_size = max_megabytes << 20;
-        logger_var_set_path_prefix(var, prefix,
-                                   PATH_PREFIX_BUFLEN > PATH_BUFLEN - 27 ?
-                                   PATH_BUFLEN - 27 - 1 : PATH_PREFIX_BUFLEN - 1);
+        logger_var_set_path_prefix(var, dirpath, prefix,
+                                   (PATH_PREFIX_BUFLEN > PATH_BUFLEN - MIN_PATH_BUFLEN) ?
+                                   (PATH_BUFLEN - MIN_PATH_BUFLEN - 1) :
+                                   (PATH_PREFIX_BUFLEN - 1));
     } else {
         var->rotate_trigger = trigger_none;
         var->get_filename = filename_none;
@@ -391,13 +385,27 @@ static inline void logger_var_init(struct logger_var* var, const char* prefix,
 
 /* ------------------------------------------------------------------------- */
 
-int logger_init(struct logger* l, const char* prefix,
+#include <sys/stat.h>
+#include <errno.h>
+
+int logger_init(struct logger* l, const char* dirpath, const char* prefix,
                 unsigned int flags, unsigned int max_megabytes)
 {
     unsigned int i;
     struct logger_impl* handler;
 
-    handler = malloc(sizeof(struct logger_impl));
+    if (!dirpath)
+        return -1;
+
+    if (mkdir(dirpath, 0755) != 0) {
+        if (errno != EEXIST) {
+            fprintf(stderr, "logger init: mkdir(%s) failed: %s.",
+                    dirpath, strerror(errno));
+            return -1;
+        }
+    }
+
+    handler = (struct logger_impl*)malloc(sizeof(struct logger_impl));
     if (!handler)
         return -1;
 
@@ -415,7 +423,7 @@ int logger_init(struct logger* l, const char* prefix,
         pthread_mutex_init(&logger->lock, NULL);
     }
 
-    logger_var_init(&handler->var, prefix, flags, max_megabytes);
+    logger_var_init(&handler->var, dirpath, prefix, flags, max_megabytes);
 
     l->handler = handler;
     return 0;
@@ -448,10 +456,10 @@ void logger_destroy(struct logger* l)
 
 static struct logger o_o;
 
-int log_init(const char* prefix, unsigned int flags,
+int log_init(const char* dirpath ,const char* prefix, unsigned int flags,
              unsigned int max_megabytes)
 {
-    return logger_init(&o_o, prefix, flags, max_megabytes);
+    return logger_init(&o_o, dirpath, prefix, flags, max_megabytes);
 }
 
 void log_destroy(void)
@@ -470,12 +478,12 @@ void __log_debug(const char* filename, int line, const char* fmt, ...)
 }
 #endif
 
-void __log_user(const char* filename, int line, const char* fmt, ...)
+void __log_misc(const char* filename, int line, const char* fmt, ...)
 {
     va_list args;
 
     va_start(args, fmt);
-    __vlogger(&o_o, LOG_LEVEL_USER, filename, line, fmt, args);
+    __vlogger(&o_o, LOG_LEVEL_MISC, filename, line, fmt, args);
     va_end(args);
 }
 
