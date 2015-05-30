@@ -123,7 +123,7 @@ static inline void current_datetime(char *buf, int size, struct tm* tp)
 static void generic_logger(struct logger_info* logger,
                            struct logger_var* var,
                            const char* filename, int line, /* extra info */
-                           const char* fmt, va_list args)
+                           const char* fmt, va_list* args)
 {
     struct tm tm;
     char timestr[32];
@@ -142,7 +142,7 @@ static void generic_logger(struct logger_info* logger,
         logger->ts.tm_year = tm.tm_year;
     }
 
-    vsnprintf(logger->buf, MAX_LOG_LEN, fmt, args);
+    vsnprintf(logger->buf, MAX_LOG_LEN, fmt, *args);
     logger->filesize += fprintf(logger->fp, "[%s] [%s:%u]\t%s\n",
                                 timestr, filename, line, logger->buf);
     fflush(logger->fp); /* flush cache to disk */
@@ -152,7 +152,7 @@ static void generic_logger(struct logger_info* logger,
 
 static inline void __vlogger(struct logger* l, int level,
                              const char* filename, int line,
-                             const char* fmt, va_list args)
+                             const char* fmt, va_list* args)
 {
     struct logger_impl* handler = l->handler;
 
@@ -167,7 +167,7 @@ void __logger_debug(struct logger* l, const char* filename, int line,
     va_list args;
 
     va_start(args, fmt);
-    __vlogger(l, LOG_LEVEL_DEBUG, filename, line, fmt, args);
+    __vlogger(l, LOG_LEVEL_DEBUG, filename, line, fmt, &args);
     va_end(args);
 }
 #endif
@@ -178,7 +178,7 @@ void __logger_misc(struct logger* l, const char* filename, int line,
     va_list args;
 
     va_start(args, fmt);
-    __vlogger(l, LOG_LEVEL_MISC, filename, line, fmt, args);
+    __vlogger(l, LOG_LEVEL_MISC, filename, line, fmt, &args);
     va_end(args);
 }
 
@@ -188,7 +188,7 @@ void __logger_info(struct logger* l, const char* filename, int line,
     va_list args;
 
     va_start(args, fmt);
-    __vlogger(l, LOG_LEVEL_INFO, filename, line, fmt, args);
+    __vlogger(l, LOG_LEVEL_INFO, filename, line, fmt, &args);
     va_end(args);
 }
 
@@ -198,7 +198,7 @@ void __logger_warning(struct logger* l, const char* filename, int line,
     va_list args;
 
     va_start(args, fmt);
-    __vlogger(l, LOG_LEVEL_WARNING, filename, line, fmt, args);
+    __vlogger(l, LOG_LEVEL_WARNING, filename, line, fmt, &args);
     va_end(args);
 }
 
@@ -208,7 +208,7 @@ void __logger_error(struct logger* l, const char* filename, int line,
     va_list args;
 
     va_start(args, fmt);
-    __vlogger(l, LOG_LEVEL_ERROR, filename, line, fmt, args);
+    __vlogger(l, LOG_LEVEL_ERROR, filename, line, fmt, &args);
     va_end(args);
 }
 
@@ -218,7 +218,7 @@ void __logger_fatal(struct logger* l, const char* filename, int line,
     va_list args;
 
     va_start(args, fmt);
-    __vlogger(l, LOG_LEVEL_FATAL, filename, line, fmt, args);
+    __vlogger(l, LOG_LEVEL_FATAL, filename, line, fmt, &args);
     va_end(args);
 }
 
@@ -473,7 +473,7 @@ void __log_debug(const char* filename, int line, const char* fmt, ...)
     va_list args;
 
     va_start(args, fmt);
-    __vlogger(&o_o, LOG_LEVEL_DEBUG, filename, line, fmt, args);
+    __vlogger(&o_o, LOG_LEVEL_DEBUG, filename, line, fmt, &args);
     va_end(args);
 }
 #endif
@@ -483,7 +483,7 @@ void __log_misc(const char* filename, int line, const char* fmt, ...)
     va_list args;
 
     va_start(args, fmt);
-    __vlogger(&o_o, LOG_LEVEL_MISC, filename, line, fmt, args);
+    __vlogger(&o_o, LOG_LEVEL_MISC, filename, line, fmt, &args);
     va_end(args);
 }
 
@@ -492,7 +492,7 @@ void __log_info(const char* filename, int line, const char* fmt, ...)
     va_list args;
 
     va_start(args, fmt);
-    __vlogger(&o_o, LOG_LEVEL_INFO, filename, line, fmt, args);
+    __vlogger(&o_o, LOG_LEVEL_INFO, filename, line, fmt, &args);
     va_end(args);
 }
 
@@ -501,7 +501,7 @@ void __log_warning(const char* filename, int line, const char* fmt, ...)
     va_list args;
 
     va_start(args, fmt);
-    __vlogger(&o_o, LOG_LEVEL_WARNING, filename, line, fmt, args);
+    __vlogger(&o_o, LOG_LEVEL_WARNING, filename, line, fmt, &args);
     va_end(args);
 }
 
@@ -510,7 +510,7 @@ void __log_error(const char* filename, int line, const char* fmt, ...)
     va_list args;
 
     va_start(args, fmt);
-    __vlogger(&o_o, LOG_LEVEL_ERROR, filename, line, fmt, args);
+    __vlogger(&o_o, LOG_LEVEL_ERROR, filename, line, fmt, &args);
     va_end(args);
 }
 
@@ -519,6 +519,6 @@ void __log_fatal(const char* filename, int line, const char* fmt, ...)
     va_list args;
 
     va_start(args, fmt);
-    __vlogger(&o_o, LOG_LEVEL_FATAL, filename, line, fmt, args);
+    __vlogger(&o_o, LOG_LEVEL_FATAL, filename, line, fmt, &args);
     va_end(args);
 }
