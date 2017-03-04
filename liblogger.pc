@@ -1,0 +1,11 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+includedir=/usr/include/liblogger
+
+Name: liblogger
+Version: 0.1
+Description: A thread-safe logger for C/C++.
+Requires:
+Libs: -llogger -lpthread
+Cflags: -I${includedir}
+
