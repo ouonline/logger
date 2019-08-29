@@ -1,6 +1,10 @@
 #ifndef __GLOBAL_LOGGER_H__
 #define __GLOBAL_LOGGER_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* global singleton logger implementation */
 
 #include "logger.h"
@@ -33,5 +37,9 @@ void log_info_impl(const char* filename, int line, const char* fmt, ...);
 void log_warning_impl(const char* filename, int line, const char* fmt, ...);
 void log_error_impl(const char* filename, int line, const char* fmt, ...);
 void log_fatal_impl(const char* filename, int line, const char* fmt, ...);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

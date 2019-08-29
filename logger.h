@@ -1,6 +1,10 @@
 #ifndef __LOGGER_H__
 #define __LOGGER_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* flag definitions for logger_init() */
 #define LOGGER_ROTATE_BY_SIZE       0x1
 #define LOGGER_ROTATE_PER_HOUR      0x2
@@ -48,5 +52,9 @@ void logger_error_impl(struct logger*, const char* filename, int line,
                        const char* fmt, ...);
 void logger_fatal_impl(struct logger*, const char* filename, int line,
                        const char* fmt, ...);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
