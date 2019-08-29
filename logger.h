@@ -22,31 +22,31 @@ void logger_destroy(struct logger*);
 #ifdef NDEBUG
 #define logger_debug(lp, fmt, ...)
 #else
-#define logger_debug(lp, fmt, ...)      __logger_debug(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define logger_debug(lp, fmt, ...)      logger_debug_impl(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #endif
 
-#define logger_misc(lp, fmt, ...)       __logger_misc(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define logger_info(lp, fmt, ...)       __logger_info(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define logger_warning(lp, fmt, ...)    __logger_warning(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define logger_error(lp, fmt, ...)      __logger_error(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define logger_fatal(lp, fmt, ...)      __logger_fatal(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define logger_misc(lp, fmt, ...)       logger_misc_impl(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define logger_info(lp, fmt, ...)       logger_info_impl(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define logger_warning(lp, fmt, ...)    logger_warning_impl(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define logger_error(lp, fmt, ...)      logger_error_impl(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define logger_fatal(lp, fmt, ...)      logger_fatal_impl(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 /* ------------------------------------------------------------------------- */
 
 #ifndef NDEBUG
-void __logger_debug(struct logger*, const char* filename, int line,
-                    const char* fmt, ...);
+void logger_debug_impl(struct logger*, const char* filename, int line,
+                       const char* fmt, ...);
 #endif
 
-void __logger_misc(struct logger*, const char* filename, int line,
-                   const char* fmt, ...);
-void __logger_info(struct logger*, const char* filename, int line,
-                   const char* fmt, ...);
-void __logger_warning(struct logger*, const char* filename, int line,
+void logger_misc_impl(struct logger*, const char* filename, int line,
                       const char* fmt, ...);
-void __logger_error(struct logger*, const char* filename, int line,
-                    const char* fmt, ...);
-void __logger_fatal(struct logger*, const char* filename, int line,
-                    const char* fmt, ...);
+void logger_info_impl(struct logger*, const char* filename, int line,
+                      const char* fmt, ...);
+void logger_warning_impl(struct logger*, const char* filename, int line,
+                         const char* fmt, ...);
+void logger_error_impl(struct logger*, const char* filename, int line,
+                       const char* fmt, ...);
+void logger_fatal_impl(struct logger*, const char* filename, int line,
+                       const char* fmt, ...);
 
 #endif

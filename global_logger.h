@@ -13,25 +13,25 @@ void log_destroy(void);
 #ifdef NDEBUG
 #define log_debug(fmt, ...)
 #else
-#define log_debug(fmt, ...)     __log_debug(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_debug(fmt, ...)     log_debug_impl(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #endif
 
-#define log_misc(fmt, ...)      __log_misc(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define log_info(fmt, ...)      __log_info(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define log_warning(fmt, ...)   __log_warning(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define log_error(fmt, ...)     __log_error(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define log_fatal(fmt, ...)     __log_fatal(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_misc(fmt, ...)      log_misc_impl(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_info(fmt, ...)      log_info_impl(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_warning(fmt, ...)   log_warning_impl(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_error(fmt, ...)     log_error_impl(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_fatal(fmt, ...)     log_fatal_impl(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 /* ------------------------------------------------------------------------- */
 
 #ifndef NDEBUG
-void __log_debug(const char* filename, int line, const char* fmt, ...);
+void log_debug_impl(const char* filename, int line, const char* fmt, ...);
 #endif
 
-void __log_misc(const char* filename, int line, const char* fmt, ...);
-void __log_info(const char* filename, int line, const char* fmt, ...);
-void __log_warning(const char* filename, int line, const char* fmt, ...);
-void __log_error(const char* filename, int line, const char* fmt, ...);
-void __log_fatal(const char* filename, int line, const char* fmt, ...);
+void log_misc_impl(const char* filename, int line, const char* fmt, ...);
+void log_info_impl(const char* filename, int line, const char* fmt, ...);
+void log_warning_impl(const char* filename, int line, const char* fmt, ...);
+void log_error_impl(const char* filename, int line, const char* fmt, ...);
+void log_fatal_impl(const char* filename, int line, const char* fmt, ...);
 
 #endif

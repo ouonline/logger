@@ -58,14 +58,8 @@ struct logger_var {
     char path_prefix[PATH_PREFIX_BUFLEN];
 } __attribute__((packed));
 
-#define MAX_LOG_LEN (4096 \
-                     - sizeof(FILE*) \
-                     - sizeof(struct log_tm) \
-                     - sizeof(unsigned int) \
-                     - sizeof(unsigned long) \
-                     - sizeof(pthread_mutex_t))
+#define MAX_LOG_LEN 1024
 
-/* sizeof(logger_info) == 4096 */
 struct logger_info {
     FILE* fp;
     struct log_tm ts; /* timestamp of last write */
@@ -73,7 +67,7 @@ struct logger_info {
     unsigned long filesize;
     pthread_mutex_t lock;
     char buf[MAX_LOG_LEN];
-} __attribute__((packed));
+};
 
 struct logger_impl {
     struct logger_var var;
@@ -161,8 +155,8 @@ static inline void __vlogger(struct logger* l, int level,
 }
 
 #ifndef NDEBUG
-void __logger_debug(struct logger* l, const char* filename, int line,
-                    const char* fmt, ...)
+void logger_debug_impl(struct logger* l, const char* filename, int line,
+                       const char* fmt, ...)
 {
     va_list args;
 
@@ -172,8 +166,8 @@ void __logger_debug(struct logger* l, const char* filename, int line,
 }
 #endif
 
-void __logger_misc(struct logger* l, const char* filename, int line,
-                   const char* fmt, ...)
+void logger_misc_impl(struct logger* l, const char* filename, int line,
+                      const char* fmt, ...)
 {
     va_list args;
 
@@ -182,8 +176,8 @@ void __logger_misc(struct logger* l, const char* filename, int line,
     va_end(args);
 }
 
-void __logger_info(struct logger* l, const char* filename, int line,
-                   const char* fmt, ...)
+void logger_info_impl(struct logger* l, const char* filename, int line,
+                      const char* fmt, ...)
 {
     va_list args;
 
@@ -192,8 +186,8 @@ void __logger_info(struct logger* l, const char* filename, int line,
     va_end(args);
 }
 
-void __logger_warning(struct logger* l, const char* filename, int line,
-                      const char* fmt, ...)
+void logger_warning_impl(struct logger* l, const char* filename, int line,
+                         const char* fmt, ...)
 {
     va_list args;
 
@@ -202,8 +196,8 @@ void __logger_warning(struct logger* l, const char* filename, int line,
     va_end(args);
 }
 
-void __logger_error(struct logger* l, const char* filename, int line,
-                    const char* fmt, ...)
+void logger_error_impl(struct logger* l, const char* filename, int line,
+                       const char* fmt, ...)
 {
     va_list args;
 
@@ -212,8 +206,8 @@ void __logger_error(struct logger* l, const char* filename, int line,
     va_end(args);
 }
 
-void __logger_fatal(struct logger* l, const char* filename, int line,
-                    const char* fmt, ...)
+void logger_fatal_impl(struct logger* l, const char* filename, int line,
+                       const char* fmt, ...)
 {
     va_list args;
 
@@ -370,7 +364,7 @@ static inline void logger_var_init(struct logger_var* var,
                                    unsigned int flags,
                                    unsigned int max_megabytes)
 {
-    if (prefix) {
+    if (dirpath && prefix) {
         logger_var_set_func(var, flags);
         var->max_file_size = max_megabytes << 20;
         logger_var_set_path_prefix(var, dirpath, prefix,
@@ -394,14 +388,13 @@ int logger_init(struct logger* l, const char* dirpath, const char* prefix,
     unsigned int i;
     struct logger_impl* handler;
 
-    if (!dirpath)
-        return -1;
-
-    if (mkdir(dirpath, 0755) != 0) {
-        if (errno != EEXIST) {
-            fprintf(stderr, "logger init: mkdir(%s) failed: %s.",
-                    dirpath, strerror(errno));
-            return -1;
+    if (dirpath) {
+        if (mkdir(dirpath, 0755) != 0) {
+            if (errno != EEXIST) {
+                fprintf(stderr, "logger init: mkdir(%s) failed: %s.",
+                        dirpath, strerror(errno));
+                return -1;
+            }
         }
     }
 
@@ -468,7 +461,7 @@ void log_destroy(void)
 }
 
 #ifndef NDEBUG
-void __log_debug(const char* filename, int line, const char* fmt, ...)
+void log_debug_impl(const char* filename, int line, const char* fmt, ...)
 {
     va_list args;
 
@@ -478,7 +471,7 @@ void __log_debug(const char* filename, int line, const char* fmt, ...)
 }
 #endif
 
-void __log_misc(const char* filename, int line, const char* fmt, ...)
+void log_misc_impl(const char* filename, int line, const char* fmt, ...)
 {
     va_list args;
 
@@ -487,7 +480,7 @@ void __log_misc(const char* filename, int line, const char* fmt, ...)
     va_end(args);
 }
 
-void __log_info(const char* filename, int line, const char* fmt, ...)
+void log_info_impl(const char* filename, int line, const char* fmt, ...)
 {
     va_list args;
 
@@ -496,7 +489,7 @@ void __log_info(const char* filename, int line, const char* fmt, ...)
     va_end(args);
 }
 
-void __log_warning(const char* filename, int line, const char* fmt, ...)
+void log_warning_impl(const char* filename, int line, const char* fmt, ...)
 {
     va_list args;
 
@@ -505,7 +498,7 @@ void __log_warning(const char* filename, int line, const char* fmt, ...)
     va_end(args);
 }
 
-void __log_error(const char* filename, int line, const char* fmt, ...)
+void log_error_impl(const char* filename, int line, const char* fmt, ...)
 {
     va_list args;
 
@@ -514,7 +507,7 @@ void __log_error(const char* filename, int line, const char* fmt, ...)
     va_end(args);
 }
 
-void __log_fatal(const char* filename, int line, const char* fmt, ...)
+void log_fatal_impl(const char* filename, int line, const char* fmt, ...)
 {
     va_list args;
 
