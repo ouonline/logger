@@ -11,7 +11,19 @@
 static pthread_mutex_t g_stdout_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t g_stderr_lock = PTHREAD_MUTEX_INITIALIZER;
 
-static void generic_logger(FILE* fp, pthread_mutex_t* lock,
+#define LOG_LEVEL_DEBUG     0
+#define LOG_LEVEL_MISC      1
+#define LOG_LEVEL_INFO      2
+#define LOG_LEVEL_WARNING   3
+#define LOG_LEVEL_ERROR     4
+#define LOG_LEVEL_FATAL     5
+#define LOG_LEVEL_MAX       6
+
+static const char* log_level_str[] = {
+    "DEBUG", "MISC", "INFO", "WARNING", "ERROR", "FATAL",
+};
+
+static void generic_logger(int level, FILE* fp, pthread_mutex_t* lock,
                            const char* filename, int line,
                            const char* fmt, va_list* args) {
     struct tm tm;
@@ -23,35 +35,74 @@ static void generic_logger(FILE* fp, pthread_mutex_t* lock,
     current_datetime(timestr, &tm);
 
     vsnprintf(buf, MAX_LOG_LEN, fmt, *args);
-    fprintf(fp, "[%s] [%s:%u]\t%s\n", timestr, filename, line, buf);
+    fprintf(fp, "[%s] [%s] [%s:%u]\t%s\n",
+            log_level_str[level], timestr, filename, line, buf);
     fflush(fp); /* flush cache to disk */
 
     pthread_mutex_unlock(lock);
 }
 
-static void logger_stdout(struct logger* l, const char* filename, int line,
-                          const char* fmt, ...) {
+static void stdio_logger_debug(struct logger* l, const char* filename, int line,
+                               const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    generic_logger(stdout, &g_stdout_lock, filename, line, fmt, &args);
+    generic_logger(LOG_LEVEL_DEBUG, stdout, &g_stdout_lock, filename,
+                   line, fmt, &args);
     va_end(args);
 }
 
-static void logger_stderr(struct logger* l, const char* filename, int line,
-                          const char* fmt, ...) {
+static void stdio_logger_misc(struct logger* l, const char* filename, int line,
+                              const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    generic_logger(stderr, &g_stderr_lock, filename, line, fmt, &args);
+    generic_logger(LOG_LEVEL_MISC, stdout, &g_stdout_lock, filename,
+                   line, fmt, &args);
+    va_end(args);
+}
+
+static void stdio_logger_info(struct logger* l, const char* filename, int line,
+                              const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    generic_logger(LOG_LEVEL_INFO, stdout, &g_stdout_lock, filename,
+                   line, fmt, &args);
+    va_end(args);
+}
+
+static void stdio_logger_warning(struct logger* l, const char* filename, int line,
+                                 const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    generic_logger(LOG_LEVEL_WARNING, stderr, &g_stderr_lock, filename,
+                   line, fmt, &args);
+    va_end(args);
+}
+
+static void stdio_logger_error(struct logger* l, const char* filename, int line,
+                               const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    generic_logger(LOG_LEVEL_ERROR, stderr, &g_stderr_lock, filename,
+                   line, fmt, &args);
+    va_end(args);
+}
+
+static void stdio_logger_fatal(struct logger* l, const char* filename, int line,
+                               const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    generic_logger(LOG_LEVEL_FATAL, stderr, &g_stderr_lock, filename,
+                   line, fmt, &args);
     va_end(args);
 }
 
 static const struct logger_operations stdio_logger_operations = {
-    .debug = logger_stdout,
-    .misc = logger_stdout,
-    .info = logger_stdout,
-    .warning = logger_stderr,
-    .error = logger_stderr,
-    .fatal = logger_stderr,
+    .debug = stdio_logger_debug,
+    .misc = stdio_logger_misc,
+    .info = stdio_logger_info,
+    .warning = stdio_logger_warning,
+    .error = stdio_logger_error,
+    .fatal = stdio_logger_fatal,
 };
 
 void stdio_logger_init(struct logger* l) {

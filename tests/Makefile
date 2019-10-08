@@ -8,8 +8,12 @@ endif
 
 CFLAGS := $(CFLAGS) -Wall -Werror
 
-INCLUDE := -I..
-LIBS := ../liblogger.a -lpthread
+ifndef DEPSDIR
+    DEPSDIR := $(shell pwd)/../..
+endif
+
+INCLUDE := -I$(DEPSDIR)
+LIBS := $(DEPSDIR)/logger/liblogger.a $(DEPSDIR)/utils/libutils.a -lpthread
 
 OBJS := $(patsubst %c, %o, $(wildcard *.c))
 
@@ -20,10 +24,13 @@ TARGET := test_logger
 all: $(OBJS) $(TARGET)
 
 pre-process:
+	d=$(DEPSDIR)/logger; if ! [ -d $$d ]; then git clone https://github.com/ouonline/logger.git $$d; fi
+	$(MAKE) DEPSDIR=$(DEPSDIR) -C $(DEPSDIR)/logger
 	$(MAKE) -C ..
 
 post-clean:
 	$(MAKE) clean -C ..
+	$(MAKE) clean DEPSDIR=$(DEPSDIR) -C $(DEPSDIR)/logger
 
 $(TARGET): $(OBJS) | pre-process
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
