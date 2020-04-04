@@ -1,6 +1,5 @@
 #include "file_logger.h"
 #include "utils/utils.h"
-#include "utils/time_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -104,6 +103,23 @@ static void __new_log_level_file(struct logger_info* logger,
     }
 }
 
+/* time format: YYYY-MM-DD hh:mm:ss.uuuuuu
+ * buf size >= 27 */
+static void current_datetime(char buf[], struct tm* tp) {
+    int len;
+    struct timeval tv;
+    struct tm ltm;
+
+    if (!tp) {
+        tp = &ltm;
+    }
+
+    gettimeofday(&tv, NULL);
+    localtime_r(&tv.tv_sec, tp);
+    len = strftime(buf, 27, "%F %T", tp);
+    sprintf((char*)buf + len, ".%06ld", tv.tv_usec);
+}
+
 static void generic_logger(struct logger_info* logger, struct logger_var* var,
                            const char* filename, int line, const char* funcname, /* extra info */
                            const char* fmt, va_list* args) {
@@ -196,6 +212,8 @@ static inline int trigger_size(const struct tm* current,
                                const struct log_tm* old,
                                unsigned long max_file_size,
                                unsigned long filesize) {
+    (void)current;
+    (void)old;
     return (filesize >= max_file_size);
 }
 
@@ -210,6 +228,8 @@ static inline int trigger_hour(const struct tm* current,
                                const struct log_tm* old,
                                unsigned long max_file_size,
                                unsigned long filesize) {
+    (void)max_file_size;
+    (void)filesize;
     return (! ((old->tm_hour == current->tm_hour) &&
                (old->tm_mday == current->tm_mday) &&
                (old->tm_mon == current->tm_mon) &&
@@ -226,6 +246,8 @@ static inline int trigger_day(const struct tm* current,
                               const struct log_tm* old,
                               unsigned long max_file_size,
                               unsigned long filesize) {
+    (void)max_file_size;
+    (void)filesize;
     return (! ((old->tm_mday == current->tm_mday) &&
                (old->tm_mon == current->tm_mon) &&
                (old->tm_year == current->tm_year)));
@@ -265,10 +287,18 @@ static inline int trigger_none(const struct tm* current,
                                const struct log_tm* old,
                                unsigned long max_file_size,
                                unsigned long filesize) {
+    (void)current;
+    (void)old;
+    (void)max_file_size;
+    (void)filesize;
     return 0;
 }
 
-static inline void filename_none(char* buf, int level, const struct tm* ts) {}
+static inline void filename_none(char* buf, int level, const struct tm* ts) {
+    (void)buf;
+    (void)level;
+    (void)ts;
+}
 
 static void logger_var_set_func(struct logger_var* var, unsigned flags) {
     switch (flags & LOGGER_ROTATE_FLAG_MASK) {
