@@ -19,17 +19,17 @@ all: $(TARGET)
 omake_phony_0:
 	$(MAKE) debug=$(debug) liblogger_static.a -C ..
 
-test_logger_INCLUDE := -I../..
+omake_dep_0_INCLUDE := -I../..
 
-test_logger.c.test_logger.o: test_logger.c
-	$(CC) $(CFLAGS) -Wall -Werror -Wextra -fPIC $(test_logger_INCLUDE) -c $< -o $@
+test_logger.c.omake_dep_0.o: test_logger.c
+	$(CC) $(CFLAGS) -Wall -Werror -Wextra -fPIC $(omake_dep_0_INCLUDE) -c $< -o $@
 
-test_logger_OBJS := test_logger.c.test_logger.o
+test_logger_OBJS := test_logger.c.omake_dep_0.o
 
 test_logger_LIBS := ../liblogger_static.a ../../utils/libutils_static.a -lpthread
 
 test_logger: $(test_logger_OBJS) | omake_phony_0
-	$(CC) $(CFLAGS) -Wall -Werror -Wextra -fPIC -o $@ $^ $(test_logger_LIBS)
+	$(CC) $(CFLAGS) -fPIC -Wextra -Werror -Wall -o $@ $^ $(test_logger_LIBS)
 
 clean:
 	rm -f $(TARGET) $(test_logger_OBJS)

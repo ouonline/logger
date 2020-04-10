@@ -34,7 +34,7 @@ logger_shared_OBJS := stdio_logger.c.omake_dep_0.o file_logger.c.omake_dep_0.o
 logger_shared_LIBS := ../utils/libutils_static.a -lpthread
 
 liblogger_shared.so: $(logger_shared_OBJS) | omake_phony_0
-	$(CC) $(CFLAGS) -shared -o $@ $^ $(logger_shared_LIBS)
+	$(CC) $(CFLAGS) -fPIC -Wextra -Werror -Wall -shared -o $@ $^ $(logger_shared_LIBS)
 
 logger_static_OBJS := stdio_logger.c.omake_dep_0.o file_logger.c.omake_dep_0.o
 
