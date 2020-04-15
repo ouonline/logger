@@ -9,6 +9,10 @@ struct logger {
     const struct logger_operations* ops;
 };
 
+#ifdef __cplusplus
+typedef struct logger Logger;
+#endif
+
 typedef void (*logger_func_t)(struct logger*, const char* filename, int line,
                               const char* funcname, const char* fmt, ...);
 

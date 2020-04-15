@@ -10,26 +10,29 @@ endif
 
 TARGET := test_logger
 
-.PHONY: all clean
+.PHONY: all clean distclean
 
 all: $(TARGET)
 
 .PHONY: omake_phony_0
-
 omake_phony_0:
 	$(MAKE) debug=$(debug) liblogger_static.a -C ..
 
 omake_dep_0_INCLUDE := -I../..
 
-test_logger.c.omake_dep_0.o: test_logger.c
-	$(CC) $(CFLAGS) -Wall -Werror -Wextra -fPIC $(omake_dep_0_INCLUDE) -c $< -o $@
+omake_dep_0.test_logger.c.o: test_logger.c
+	$(CC) $(CFLAGS) -Wall -Werror -Wextra $(omake_dep_0_INCLUDE) -c $< -o $@
 
-test_logger_OBJS := test_logger.c.omake_dep_0.o
+test_logger_OBJS := omake_dep_0.test_logger.c.o
 
 test_logger_LIBS := ../liblogger_static.a ../../utils/libutils_static.a -lpthread
 
 test_logger: $(test_logger_OBJS) | omake_phony_0
-	$(CC) $(CFLAGS) -fPIC -Wextra -Werror -Wall -o $@ $^ $(test_logger_LIBS)
+	$(CC) $(CFLAGS) -Wextra -Werror -Wall -o $@ $^ $(test_logger_LIBS)
 
 clean:
 	rm -f $(TARGET) $(test_logger_OBJS)
+
+distclean:
+	$(MAKE) clean
+	$(MAKE) distclean -C ..

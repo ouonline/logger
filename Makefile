@@ -12,34 +12,37 @@ AR := ar
 
 TARGET := liblogger_shared.so liblogger_static.a
 
-.PHONY: all clean
+.PHONY: all clean distclean
 
 all: $(TARGET)
 
 .PHONY: omake_phony_0
-
 omake_phony_0:
 	$(MAKE) debug=$(debug) libutils_static.a -C ../utils
 
 omake_dep_0_INCLUDE := -I..
 
-stdio_logger.c.omake_dep_0.o: stdio_logger.c
+omake_dep_0.stdio_logger.c.o: stdio_logger.c
 	$(CC) $(CFLAGS) -Wall -Werror -Wextra -fPIC $(omake_dep_0_INCLUDE) -c $< -o $@
 
-file_logger.c.omake_dep_0.o: file_logger.c
+omake_dep_0.file_logger.c.o: file_logger.c
 	$(CC) $(CFLAGS) -Wall -Werror -Wextra -fPIC $(omake_dep_0_INCLUDE) -c $< -o $@
 
-logger_shared_OBJS := stdio_logger.c.omake_dep_0.o file_logger.c.omake_dep_0.o
+logger_shared_OBJS := omake_dep_0.file_logger.c.o omake_dep_0.stdio_logger.c.o
 
 logger_shared_LIBS := ../utils/libutils_static.a -lpthread
 
 liblogger_shared.so: $(logger_shared_OBJS) | omake_phony_0
 	$(CC) $(CFLAGS) -fPIC -Wextra -Werror -Wall -shared -o $@ $^ $(logger_shared_LIBS)
 
-logger_static_OBJS := stdio_logger.c.omake_dep_0.o file_logger.c.omake_dep_0.o
+logger_static_OBJS := omake_dep_0.file_logger.c.o omake_dep_0.stdio_logger.c.o
 
 liblogger_static.a: $(logger_static_OBJS) | omake_phony_0
 	$(AR) rc $@ $^
 
 clean:
 	rm -f $(TARGET) $(logger_shared_OBJS) $(logger_static_OBJS)
+
+distclean:
+	$(MAKE) clean
+	$(MAKE) distclean -C ../utils
