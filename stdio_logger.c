@@ -41,7 +41,7 @@ static void current_datetime(char buf[], struct tm* tp) {
 }
 
 static void generic_logger(int level, FILE* fp, pthread_mutex_t* lock,
-                           const char* filename, int line, const char* funcname,
+                           const char* filename, int line,
                            const char* fmt, va_list* args) {
     struct tm tm;
     char timestr[32];
@@ -52,70 +52,70 @@ static void generic_logger(int level, FILE* fp, pthread_mutex_t* lock,
     current_datetime(timestr, &tm);
 
     vsnprintf(buf, MAX_LOG_LEN, fmt, *args);
-    fprintf(fp, "[%s] [%s] [%s:%u:%s()]\t%s\n",
-            log_level_str[level], timestr, filename, line, funcname, buf);
+    fprintf(fp, "[%s] [%s] [%s:%u]\t%s\n",
+            log_level_str[level], timestr, filename, line, buf);
     fflush(fp); /* flush cache to disk */
 
     pthread_mutex_unlock(lock);
 }
 
 static void stdio_logger_debug(struct logger* l, const char* filename, int line,
-                               const char* funcname, const char* fmt, ...) {
+                               const char* fmt, ...) {
     (void)l;
     va_list args;
     va_start(args, fmt);
     generic_logger(LOG_LEVEL_DEBUG, stdout, &g_stdout_lock, filename,
-                   line, funcname, fmt, &args);
+                   line, fmt, &args);
     va_end(args);
 }
 
 static void stdio_logger_misc(struct logger* l, const char* filename, int line,
-                              const char* funcname, const char* fmt, ...) {
+                              const char* fmt, ...) {
     (void)l;
     va_list args;
     va_start(args, fmt);
     generic_logger(LOG_LEVEL_MISC, stdout, &g_stdout_lock, filename,
-                   line, funcname, fmt, &args);
+                   line, fmt, &args);
     va_end(args);
 }
 
 static void stdio_logger_info(struct logger* l, const char* filename, int line,
-                              const char* funcname, const char* fmt, ...) {
+                              const char* fmt, ...) {
     (void)l;
     va_list args;
     va_start(args, fmt);
     generic_logger(LOG_LEVEL_INFO, stdout, &g_stdout_lock, filename,
-                   line, funcname, fmt, &args);
+                   line, fmt, &args);
     va_end(args);
 }
 
 static void stdio_logger_warning(struct logger* l, const char* filename, int line,
-                                 const char* funcname, const char* fmt, ...) {
+                                 const char* fmt, ...) {
     (void)l;
     va_list args;
     va_start(args, fmt);
     generic_logger(LOG_LEVEL_WARNING, stderr, &g_stderr_lock, filename,
-                   line, funcname, fmt, &args);
+                   line, fmt, &args);
     va_end(args);
 }
 
 static void stdio_logger_error(struct logger* l, const char* filename, int line,
-                               const char* funcname, const char* fmt, ...) {
+                               const char* fmt, ...) {
     (void)l;
     va_list args;
     va_start(args, fmt);
     generic_logger(LOG_LEVEL_ERROR, stderr, &g_stderr_lock, filename,
-                   line, funcname, fmt, &args);
+                   line, fmt, &args);
     va_end(args);
 }
 
 static void stdio_logger_fatal(struct logger* l, const char* filename, int line,
-                               const char* funcname, const char* fmt, ...) {
+                               const char* fmt, ...) {
     (void)l;
     va_list args;
     va_start(args, fmt);
     generic_logger(LOG_LEVEL_FATAL, stderr, &g_stderr_lock, filename,
-                   line, funcname, fmt, &args);
+                   line, fmt, &args);
     va_end(args);
 }
 

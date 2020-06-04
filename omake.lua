@@ -1,15 +1,13 @@
 project = CreateProject()
 
 dep = project:CreateDependency()
-dep:AddSourceFiles("*.c")
-dep:AddFlags("-Wall", "-Werror", "-Wextra", "-fPIC")
-dep:AddStaticLibrary("../utils", "utils_static")
-dep:AddSysLibraries("pthread")
+    :AddSourceFiles("*.c")
+    :AddFlags("-Wall", "-Werror", "-Wextra", "-fPIC")
+    :AddStaticLibrary("../utils", "utils_static")
+    :AddSysLibraries("pthread")
 
-a = project:CreateStaticLibrary("logger_static")
-a:AddDependencies(dep)
+project:CreateStaticLibrary("logger_static"):AddDependencies(dep)
 
-so = project:CreateSharedLibrary("logger_shared")
-so:AddDependencies(dep)
+project:CreateSharedLibrary("logger_shared"):AddDependencies(dep)
 
 return project

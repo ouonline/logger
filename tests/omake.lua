@@ -1,11 +1,9 @@
 project = CreateProject()
 
-dep = project:CreateDependency()
-dep:AddSourceFiles("*.c")
-dep:AddFlags("-Wall", "-Werror", "-Wextra")
-dep:AddStaticLibrary("..", "logger_static")
-
-target = project:CreateBinary("test_logger")
-target:AddDependencies(dep)
+project:CreateBinary("test_logger"):AddDependencies(
+    project:CreateDependency()
+        :AddSourceFiles("*.c")
+        :AddFlags("-Wall", "-Werror", "-Wextra")
+        :AddStaticLibrary("..", "logger_static"))
 
 return project

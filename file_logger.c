@@ -121,7 +121,7 @@ static void current_datetime(char buf[], struct tm* tp) {
 }
 
 static void generic_logger(struct logger_info* logger, struct logger_var* var,
-                           const char* filename, int line, const char* funcname, /* extra info */
+                           const char* filename, int line, /* extra info */
                            const char* fmt, va_list* args) {
     struct tm tm;
     char timestr[32];
@@ -141,66 +141,66 @@ static void generic_logger(struct logger_info* logger, struct logger_var* var,
     }
 
     vsnprintf(logger->buf, MAX_LOG_LEN, fmt, *args);
-    logger->filesize += fprintf(logger->fp, "[%s] [%s:%u:%s()]\t%s\n",
-                                timestr, filename, line, funcname, logger->buf);
+    logger->filesize += fprintf(logger->fp, "[%s] [%s:%u]\t%s\n",
+                                timestr, filename, line, logger->buf);
     fflush(logger->fp); /* flush cache to disk */
 
     pthread_mutex_unlock(&logger->lock);
 }
 
 static inline void __vlogger(struct logger* l, int level,
-                             const char* filename, int line, const char* funcname,
+                             const char* filename, int line,
                              const char* fmt, va_list* args) {
     struct file_logger* fl = container_of(l, struct file_logger, l);
     struct file_logger_impl* impl = fl->impl;
-    generic_logger(&impl->o_o[level], &impl->var, filename, line, funcname, fmt, args);
+    generic_logger(&impl->o_o[level], &impl->var, filename, line, fmt, args);
 }
 
 void file_logger_debug(struct logger* l, const char* filename, int line,
-                       const char* funcname, const char* fmt, ...) {
+                       const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    __vlogger(l, LOG_LEVEL_DEBUG, filename, line, funcname, fmt, &args);
+    __vlogger(l, LOG_LEVEL_DEBUG, filename, line, fmt, &args);
     va_end(args);
 }
 
 void file_logger_misc(struct logger* l, const char* filename, int line,
-                      const char* funcname, const char* fmt, ...) {
+                      const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    __vlogger(l, LOG_LEVEL_MISC, filename, line, funcname, fmt, &args);
+    __vlogger(l, LOG_LEVEL_MISC, filename, line, fmt, &args);
     va_end(args);
 }
 
 void file_logger_info(struct logger* l, const char* filename, int line,
-                      const char* funcname, const char* fmt, ...) {
+                      const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    __vlogger(l, LOG_LEVEL_INFO, filename, line, funcname, fmt, &args);
+    __vlogger(l, LOG_LEVEL_INFO, filename, line, fmt, &args);
     va_end(args);
 }
 
 void file_logger_warning(struct logger* l, const char* filename, int line,
-                         const char* funcname, const char* fmt, ...) {
+                         const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    __vlogger(l, LOG_LEVEL_WARNING, filename, line, funcname, fmt, &args);
+    __vlogger(l, LOG_LEVEL_WARNING, filename, line, fmt, &args);
     va_end(args);
 }
 
 void file_logger_error(struct logger* l, const char* filename, int line,
-                       const char* funcname, const char* fmt, ...) {
+                       const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    __vlogger(l, LOG_LEVEL_ERROR, filename, line, funcname, fmt, &args);
+    __vlogger(l, LOG_LEVEL_ERROR, filename, line, fmt, &args);
     va_end(args);
 }
 
 void file_logger_fatal(struct logger* l, const char* filename, int line,
-                       const char* funcname, const char* fmt, ...) {
+                       const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    __vlogger(l, LOG_LEVEL_FATAL, filename, line, funcname, fmt, &args);
+    __vlogger(l, LOG_LEVEL_FATAL, filename, line, fmt, &args);
     va_end(args);
 }
 

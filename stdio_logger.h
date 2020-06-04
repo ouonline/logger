@@ -1,5 +1,5 @@
-#ifndef __STDIO_LOGGER_H__
-#define __STDIO_LOGGER_H__
+#ifndef __LOGGER_STDIO_LOGGER_H__
+#define __LOGGER_STDIO_LOGGER_H__
 
 #ifdef __cplusplus
 extern "C" {

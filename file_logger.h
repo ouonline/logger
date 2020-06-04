@@ -1,5 +1,5 @@
-#ifndef __FILE_LOGGER_H__
-#define __FILE_LOGGER_H__
+#ifndef __LOGGER_FILE_LOGGER_H__
+#define __LOGGER_FILE_LOGGER_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -11,6 +11,10 @@ struct file_logger {
     struct logger l;
     struct file_logger_impl* impl;
 };
+
+#ifdef __cplusplus
+typedef struct file_logger FileLogger;
+#endif
 
 /* flag definitions for init */
 #define LOGGER_ROTATE_BY_SIZE       0x1
