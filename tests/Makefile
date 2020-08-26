@@ -28,7 +28,7 @@ test_logger_OBJS := omake_dep_0.test_logger.c.o
 test_logger_LIBS := ../liblogger_static.a ../../utils/libutils_static.a -lpthread
 
 test_logger: $(test_logger_OBJS) | omake_phony_0
-	$(CC) $(CFLAGS) -Wextra -Werror -Wall -o $@ $^ $(test_logger_LIBS)
+	$(CC) $(CFLAGS) -Wall -Werror -Wextra -o $@ $^ $(test_logger_LIBS)
 
 clean:
 	rm -f $(TARGET) $(test_logger_OBJS)
