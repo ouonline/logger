@@ -1,11 +1,10 @@
 #include "logger/file_logger.h"
 #include "cutils/utils.h"
+#include "cutils/time_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include <time.h>
-#include <sys/time.h>
 #include <pthread.h>
 
 /* ------------------------------------------------------------------------- */
@@ -101,23 +100,6 @@ static void __new_log_level_file(struct logger_info* logger,
                 (logger->level <= LOG_LEVEL_INFO) ? "stdout" : "stderr");
         logger->fp = (logger->level <= LOG_LEVEL_INFO) ? stdout : stderr;
     }
-}
-
-/* time format: YYYY-MM-DD hh:mm:ss.uuuuuu
- * buf size >= 27 */
-static void current_datetime(char buf[], struct tm* tp) {
-    int len;
-    struct timeval tv;
-    struct tm ltm;
-
-    if (!tp) {
-        tp = &ltm;
-    }
-
-    gettimeofday(&tv, NULL);
-    localtime_r(&tv.tv_sec, tp);
-    len = strftime(buf, 27, "%F %T", tp);
-    sprintf((char*)buf + len, ".%06ld", tv.tv_usec);
 }
 
 static void generic_logger(struct logger_info* logger, struct logger_var* var,

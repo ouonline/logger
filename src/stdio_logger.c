@@ -3,7 +3,6 @@
 #include "cutils/time_utils.h"
 #include <stdio.h>
 #include <stdarg.h>
-#include <sys/time.h>
 #include <pthread.h>
 
 #define MAX_LOG_LEN 4096
@@ -22,23 +21,6 @@ static pthread_mutex_t g_stderr_lock = PTHREAD_MUTEX_INITIALIZER;
 static const char* log_level_str[] = {
     "DEBUG", "MISC", "\e[1;32mINFO\e[0m", "\e[0;33mWARNING\e[0m", "\e[0;31mERROR\e[0m", "\e[0;31mFATAL\e[0m",
 };
-
-/* time format: YYYY-MM-DD hh:mm:ss.uuuuuu
- * buf size >= 27 */
-static void current_datetime(char buf[], struct tm* tp) {
-    int len;
-    struct timeval tv;
-    struct tm ltm;
-
-    if (!tp) {
-        tp = &ltm;
-    }
-
-    gettimeofday(&tv, NULL);
-    localtime_r(&tv.tv_sec, tp);
-    len = strftime(buf, 27, "%F %T", tp);
-    sprintf((char*)buf + len, ".%06ld", tv.tv_usec);
-}
 
 static void generic_logger(int level, FILE* fp, pthread_mutex_t* lock,
                            const char* filename, int line,
