@@ -18,7 +18,6 @@ typedef void (*logger_func_t)(struct logger*, const char* filename, int line,
 
 struct logger_operations {
     logger_func_t debug;
-    logger_func_t misc;
     logger_func_t info;
     logger_func_t warning;
     logger_func_t error;
@@ -31,7 +30,6 @@ struct logger_operations {
 #define logger_debug(lp, fmt, ...)      (lp)->ops->debug(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #endif
 
-#define logger_misc(lp, fmt, ...)       (lp)->ops->misc(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #define logger_info(lp, fmt, ...)       (lp)->ops->info(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #define logger_warning(lp, fmt, ...)    (lp)->ops->warning(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #define logger_error(lp, fmt, ...)      (lp)->ops->error(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
