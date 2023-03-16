@@ -7,9 +7,16 @@ extern "C" {
 
 #include "logger.h"
 
-void stdio_logger_init(struct logger*);
+struct stdio_logger {
+    struct logger l;
+    struct stdio_logger_impl* impl;
+};
+
+int stdio_logger_init(struct stdio_logger*);
+void stdio_logger_destroy(struct stdio_logger*);
 
 #ifdef __cplusplus
+typedef struct stdio_logger StdioLogger;
 }
 #endif
 
