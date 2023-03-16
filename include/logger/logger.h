@@ -5,7 +5,15 @@
 extern "C" {
 #endif
 
+#define LOGGER_LEVEL_DEBUG     0
+#define LOGGER_LEVEL_INFO      1
+#define LOGGER_LEVEL_WARNING   2
+#define LOGGER_LEVEL_ERROR     3
+#define LOGGER_LEVEL_FATAL     4
+#define LOGGER_LEVEL_MAX       5
+
 struct logger {
+    unsigned int level; /* logs >= level will be recorded. */
     const struct logger_operations* ops;
 };
 
