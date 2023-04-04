@@ -246,23 +246,6 @@ static void filename_size_day(char* buf, const struct tm* ts) {
     filename_size(buf, ts);
 }
 
-static int trigger_none(const struct tm* current,
-                        const struct log_tm* old,
-                        unsigned long max_file_size,
-                        unsigned long filesize) {
-    (void)current;
-    (void)old;
-    (void)max_file_size;
-    (void)filesize;
-    return 0;
-}
-
-static void filename_none(char* buf, int level, const struct tm* ts) {
-    (void)buf;
-    (void)level;
-    (void)ts;
-}
-
 static void logger_var_set_func(struct logger_var* var, unsigned flags) {
     switch (flags & LOGGER_ROTATE_FLAG_MASK) {
         case LOGGER_ROTATE_BY_SIZE:

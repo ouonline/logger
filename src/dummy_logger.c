@@ -1,6 +1,6 @@
 #include "logger/logger.h"
 
-static void do_nothing(struct logger* l, const char* filename, int line, const char* fmt, ...) {}
+static void do_nothing(struct logger*, const char*, int, const char*, ...) {}
 
 static const struct logger_operations g_ops = {
     .debug = do_nothing,

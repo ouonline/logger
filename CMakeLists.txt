@@ -8,10 +8,17 @@ option(LOGGER_INSTALL "install headers and libs" ON)
 
 # ----- targets ----- #
 
-file(GLOB LOGGER_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
-add_library(logger_static STATIC ${LOGGER_SRC})
+file(GLOB_RECURSE __LOGGER_SRC__ ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
+add_library(logger_static STATIC ${__LOGGER_SRC__})
+unset(__LOGGER_SRC__)
+
 target_include_directories(logger_static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_compile_features(logger_static PUBLIC cxx_std_11)
+
+if(MSVC)
+    target_compile_options(logger_static PRIVATE /W4)
+else()
+    target_compile_options(logger_static PRIVATE -Wall -Wextra -Werror)
+endif()
 
 # ----- dependencies ----- #
 
@@ -20,7 +27,7 @@ set(FETCHCONTENT_QUIET OFF)
 set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
 
 if(NOT LOGGER_DEPS_DIR)
-    get_filename_component(LOGGER_DEPS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps ABSOLUTE)
+    get_filename_component(LOGGER_DEPS_DIR ${CMAKE_CURRENT_BINARY_DIR} ABSOLUTE)
     message("-- `LOGGER_DEPS_DIR` is not set. set `LOGGER_DEPS_DIR` to `${LOGGER_DEPS_DIR}`.")
 endif()
 
@@ -36,7 +43,7 @@ if(NOT TARGET cutils_static)
     FetchContent_MakeAvailable(cutils)
 endif()
 
-target_link_libraries(logger_static PUBLIC cutils_static pthread)
+target_link_libraries(logger_static PUBLIC cutils_static)
 
 # ----- installations ----- #
 
