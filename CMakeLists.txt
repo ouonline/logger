@@ -17,7 +17,7 @@ target_include_directories(logger_static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/incl
 if(MSVC)
     target_compile_options(logger_static PRIVATE /W4)
 else()
-    target_compile_options(logger_static PRIVATE -Wall -Wextra -Werror)
+    target_compile_options(logger_static PRIVATE -Wall -Wextra -Werror -Wno-format-overflow)
 endif()
 
 # ----- dependencies ----- #
