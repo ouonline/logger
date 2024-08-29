@@ -12,7 +12,7 @@
 #define LOGGER_ROTATE_FLAG_MASK     0x7
 
 static const char* g_log_level_str[] = {
-    "DEBUG", "INFO", "WARNING", "ERROR", "FATAL",
+    "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL",
 };
 
 /* fields of logging timestamp */
@@ -30,11 +30,11 @@ struct log_tm {
  *     - <prefix>_YYYYMMDD-hhmmss.<level>
  *
  * strlen("_YYYYMMDD_hhmmss.") == 17
- * max(strlen(g_log_level_str[])) == strlen("warning") == 7
+ * max(strlen(g_log_level_str[])) == strlen("TRACE") == 5
  *
- * PATH_BUFLEN should be >= 17 + 7 + 1 = 25 (including trailing '\0')
+ * PATH_BUFLEN should be >= 17 + 5 + 1 = 23 (including trailing '\0')
  */
-#define MIN_PATH_BUFLEN 25
+#define MIN_PATH_BUFLEN 23
 
 #define PATH_BUFLEN 1024
 
@@ -120,52 +120,12 @@ static void generic_logger(struct logger* l, unsigned int level,
     pthread_mutex_unlock(&info->lock);
 }
 
-void file_logger_debug(struct logger* l, const char* filename, int line,
-                       const char* fmt, ...) {
-    if (l->level <= LOGGER_LEVEL_DEBUG) {
+static void generic_func(struct logger* l, const char* filename, int line,
+                         unsigned int level, const char* fmt, ...) {
+    if (l->level <= level) {
         va_list args;
         va_start(args, fmt);
-        generic_logger(l, LOGGER_LEVEL_DEBUG, filename, line, fmt, &args);
-        va_end(args);
-    }
-}
-
-void file_logger_info(struct logger* l, const char* filename, int line,
-                      const char* fmt, ...) {
-    if (l->level <= LOGGER_LEVEL_INFO) {
-        va_list args;
-        va_start(args, fmt);
-        generic_logger(l, LOGGER_LEVEL_INFO, filename, line, fmt, &args);
-        va_end(args);
-    }
-}
-
-void file_logger_warning(struct logger* l, const char* filename, int line,
-                         const char* fmt, ...) {
-    if (l->level <= LOGGER_LEVEL_WARNING) {
-        va_list args;
-        va_start(args, fmt);
-        generic_logger(l, LOGGER_LEVEL_WARNING, filename, line, fmt, &args);
-        va_end(args);
-    }
-}
-
-void file_logger_error(struct logger* l, const char* filename, int line,
-                       const char* fmt, ...) {
-    if (l->level <= LOGGER_LEVEL_ERROR) {
-        va_list args;
-        va_start(args, fmt);
-        generic_logger(l, LOGGER_LEVEL_ERROR, filename, line, fmt, &args);
-        va_end(args);
-    }
-}
-
-void file_logger_fatal(struct logger* l, const char* filename, int line,
-                       const char* fmt, ...) {
-    if (l->level <= LOGGER_LEVEL_FATAL) {
-        va_list args;
-        va_start(args, fmt);
-        generic_logger(l, LOGGER_LEVEL_FATAL, filename, line, fmt, &args);
+        generic_logger(l, level, filename, line, fmt, &args);
         va_end(args);
     }
 }
@@ -321,14 +281,6 @@ static void logger_var_init(struct logger_var* var,
 #include <sys/stat.h>
 #include <errno.h>
 
-static const struct logger_operations file_logger_operations = {
-    .debug = file_logger_debug,
-    .info = file_logger_info,
-    .warning = file_logger_warning,
-    .error = file_logger_error,
-    .fatal = file_logger_fatal,
-};
-
 int file_logger_init(struct file_logger* l, const char* dirpath, const char* prefix,
                      unsigned int flags, unsigned int max_megabytes) {
     if (!dirpath || !prefix) {
@@ -353,8 +305,13 @@ int file_logger_init(struct file_logger* l, const char* dirpath, const char* pre
     logger_info_init(&l->impl->info);
     logger_var_init(&l->impl->var, dirpath, prefix, flags, max_megabytes);
 
-    l->l.level = LOGGER_LEVEL_DEBUG;
-    l->l.ops = &file_logger_operations;
+#ifdef NDEBUG
+    l->l.level = LOGGER_LEVEL_INFO;
+#else
+    l->l.level = LOGGER_LEVEL_TRACE;
+#endif
+
+    l->l.func = generic_func;
 
     return 0;
 }

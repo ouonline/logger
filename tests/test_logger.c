@@ -10,8 +10,9 @@ static void* print(void* arg)
 
     for (i = 0; i < 999; ++i)
         for (j = 0; j < 9999; ++j) {
-            logger_debug(&fl->l, "hello");
-            logger_warning(&fl->l, "hello");
+            logger_debug(&fl->l, "debug");
+            logger_info(&fl->l, "info");
+            logger_warn(&fl->l, "warn");
         }
 
     return NULL;
