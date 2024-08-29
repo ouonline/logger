@@ -5,6 +5,7 @@ project(logger)
 
 option(LOGGER_BUILD_TESTS "build tests" ON)
 option(LOGGER_INSTALL "install headers and libs" ON)
+option(LOGGER_STDOUT_ANSI_COLOR "use ansi color in stdout" ON)
 
 # ----- targets ----- #
 
@@ -13,6 +14,10 @@ add_library(logger_static STATIC ${__LOGGER_SRC__})
 unset(__LOGGER_SRC__)
 
 target_include_directories(logger_static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+if(LOGGER_STDOUT_ANSI_COLOR)
+    target_compile_definitions(logger_static PUBLIC LOGGER_STDOUT_ANSI_COLOR)
+endif()
 
 if(MSVC)
     target_compile_options(logger_static PRIVATE /W4)

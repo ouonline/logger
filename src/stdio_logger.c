@@ -13,8 +13,34 @@ struct stdio_logger_impl {
     pthread_mutex_t stderr_lock;
 };
 
+#ifdef LOGGER_STDOUT_ANSI_COLOR
+#define COLOR_LIGHT_BLACK_BEGIN "\e[1;30m"
+#define COLOR_LIGHT_RED_BEGIN "\e[1;31m"
+#define COLOR_LIGHT_GREEN_BEGIN "\e[1;32m"
+#define COLOR_LIGHT_YELLOW_BEGIN "\e[1;33m"
+#define COLOR_LIGHT_BLUE_BEGIN "\e[1;34m"
+#define COLOR_LIGHT_PURPLE_BEGIN "\e[1;35m"
+#define COLOR_LIGHT_CYAN_BEGIN "\e[1;36m"
+#define COLOR_LIGHT_WHITE_BEGIN "\e[1;37m"
+#define COLOR_END "\e[0m"
+#else
+#define COLOR_LIGHT_BLACK_BEGIN
+#define COLOR_LIGHT_RED_BEGIN
+#define COLOR_LIGHT_GREEN_BEGIN
+#define COLOR_LIGHT_YELLOW_BEGIN
+#define COLOR_LIGHT_BLUE_BEGIN
+#define COLOR_LIGHT_PURPLE_BEGIN
+#define COLOR_LIGHT_CYAN_BEGIN
+#define COLOR_LIGHT_WHITE_BEGIN
+#define COLOR_END
+#endif
+
 static const char* g_log_level_str[] = {
-    "\e[1;34mDEBUG\e[0m", "\e[1;32mINFO\e[0m", "\e[0;33mWARNING\e[0m", "\e[0;31mERROR\e[0m", "\e[0;31mFATAL\e[0m",
+    COLOR_LIGHT_BLUE_BEGIN"DEBUG"COLOR_END,
+    COLOR_LIGHT_GREEN_BEGIN"INFO"COLOR_END,
+    COLOR_LIGHT_YELLOW_BEGIN"WARNING"COLOR_END,
+    COLOR_LIGHT_RED_BEGIN"ERROR"COLOR_END,
+    COLOR_LIGHT_RED_BEGIN"FATAL"COLOR_END,
 };
 
 static void generic_logger(int level, FILE* fp, pthread_mutex_t* lock,
