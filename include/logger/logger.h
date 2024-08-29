@@ -5,45 +5,56 @@
 extern "C" {
 #endif
 
-#define LOGGER_LEVEL_DEBUG     0
-#define LOGGER_LEVEL_INFO      1
-#define LOGGER_LEVEL_WARNING   2
-#define LOGGER_LEVEL_ERROR     3
-#define LOGGER_LEVEL_FATAL     4
-#define LOGGER_LEVEL_MAX       5
+enum {
+    LOGGER_LEVEL_TRACE,
+    LOGGER_LEVEL_DEBUG,
+    LOGGER_LEVEL_INFO,
+    LOGGER_LEVEL_WARN,
+    LOGGER_LEVEL_ERROR,
+    LOGGER_LEVEL_FATAL,
+    LOGGER_LEVEL_MAX,
+};
 
 struct logger {
-    unsigned int level; /* logs >= level will be recorded. */
-    const struct logger_operations* ops;
+    /*
+      log's level >= level will be recorded. default is `LOGGER_LEVEL_INFO` in
+      release mode, and `LOGGER_LEVEL_TRACE` in debug mode. you can visit this
+      variable directly, or use `logger_set_level()` and `logger_get_level()`.
+    */
+    unsigned int level;
+
+    void (*func)(struct logger*, const char* filename, int line,
+                 unsigned int level, const char* fmt, ...);
 };
+
+static inline void logger_set_level(struct logger* l, unsigned int level) {
+    l->level = level;
+}
+
+static inline unsigned int logger_get_level(struct logger* l) {
+    return l->level;
+}
+
+#define logger_trace(lp, fmt, ...) \
+    (lp)->func(lp, __FILE__, __LINE__, LOGGER_LEVEL_TRACE, fmt, ##__VA_ARGS__)
+
+#define logger_debug(lp, fmt, ...) \
+    (lp)->func(lp, __FILE__, __LINE__, LOGGER_LEVEL_DEBUG, fmt, ##__VA_ARGS__)
+
+#define logger_info(lp, fmt, ...) \
+    (lp)->func(lp, __FILE__, __LINE__, LOGGER_LEVEL_INFO, fmt, ##__VA_ARGS__)
+
+#define logger_warn(lp, fmt, ...) \
+    (lp)->func(lp, __FILE__, __LINE__, LOGGER_LEVEL_WARN, fmt, ##__VA_ARGS__)
+
+#define logger_error(lp, fmt, ...) \
+    (lp)->func(lp, __FILE__, __LINE__, LOGGER_LEVEL_ERROR, fmt, ##__VA_ARGS__)
+
+#define logger_fatal(lp, fmt, ...) \
+    (lp)->func(lp, __FILE__, __LINE__, LOGGER_LEVEL_FATAL, fmt, ##__VA_ARGS__)
 
 #ifdef __cplusplus
 typedef struct logger Logger;
-#endif
-
-typedef void (*logger_func_t)(struct logger*, const char* filename, int line,
-                              const char* fmt, ...);
-
-struct logger_operations {
-    logger_func_t debug;
-    logger_func_t info;
-    logger_func_t warning;
-    logger_func_t error;
-    logger_func_t fatal;
-};
-
-#ifdef NDEBUG
-#define logger_debug(lp, fmt, ...)
-#else
-#define logger_debug(lp, fmt, ...)      (lp)->ops->debug(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#endif
-
-#define logger_info(lp, fmt, ...)       (lp)->ops->info(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define logger_warning(lp, fmt, ...)    (lp)->ops->warning(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define logger_error(lp, fmt, ...)      (lp)->ops->error(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define logger_fatal(lp, fmt, ...)      (lp)->ops->fatal(lp, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-
-#ifdef __cplusplus
 }
 #endif
 
