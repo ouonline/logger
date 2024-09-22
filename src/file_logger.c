@@ -122,7 +122,7 @@ static void generic_logger(struct logger* l, unsigned int level,
 
 static void generic_func(struct logger* l, const char* filename, int line,
                          unsigned int level, const char* fmt, ...) {
-    if (l->level <= level) {
+    if (level >= l->level) {
         va_list args;
         va_start(args, fmt);
         generic_logger(l, level, filename, line, fmt, &args);
