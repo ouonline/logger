@@ -65,7 +65,7 @@ static void generic_logger(int level, FILE* fp, pthread_mutex_t* lock,
 
 static void generic_func(struct logger* l, const char* filename, int line,
                          unsigned int level, const char* fmt, ...) {
-    if (l->level <= level) {
+    if (level >= l->level) {
         struct stdout_logger* sl = container_of(l, struct stdout_logger, l);
         va_list args;
         va_start(args, fmt);
