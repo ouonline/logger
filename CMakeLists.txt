@@ -22,7 +22,7 @@ endif()
 if(MSVC)
     target_compile_options(logger_static PRIVATE /W4)
 else()
-    target_compile_options(logger_static PRIVATE -Wall -Wextra -Werror -Wno-format-overflow)
+    target_compile_options(logger_static PRIVATE -Wall -Wextra -Werror)
 endif()
 
 # ----- dependencies ----- #
