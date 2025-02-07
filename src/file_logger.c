@@ -81,7 +81,7 @@ static void __new_log_file(struct logger_info* logger, struct logger_var* var,
         fclose(logger->fp);
     }
 
-    len = sprintf(path, "%s_", var->path_prefix);
+    len = snprintf(path, PATH_BUFLEN, "%s_", var->path_prefix);
     var->get_filename(path + len, ts);
 
     logger->fp = fopen(path, "a");
@@ -144,9 +144,9 @@ static int trigger_size(const struct tm* current,
 }
 
 static void filename_size(char* buf, const struct tm* ts) {
-    sprintf(buf, "%04d%02d%02d-%02d%02d%02d.log",
-            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
-            ts->tm_hour, ts->tm_min, ts->tm_sec);
+    snprintf(buf, 20, "%04d%02d%02d-%02d%02d%02d.log",
+             ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday,
+             ts->tm_hour, ts->tm_min, ts->tm_sec);
 }
 
 static int trigger_hour(const struct tm* current,
@@ -162,8 +162,8 @@ static int trigger_hour(const struct tm* current,
 }
 
 static void filename_hour(char* buf, const struct tm* ts) {
-    sprintf(buf, "%04d%02d%02d-%02d.log",
-            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday, ts->tm_hour);
+    snprintf(buf, 16, "%04d%02d%02d-%02d.log",
+             ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday, ts->tm_hour);
 }
 
 static int trigger_day(const struct tm* current,
@@ -178,8 +178,8 @@ static int trigger_day(const struct tm* current,
 }
 
 static void filename_day(char* buf, const struct tm* ts) {
-    sprintf(buf, "%04d%02d%02d.log",
-            ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday);
+    snprintf(buf, 13, "%04d%02d%02d.log",
+             ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday);
 }
 
 static int trigger_size_hour(const struct tm* current,
