@@ -14,8 +14,8 @@ static inline void current_datetime(char buf[], struct tm* tp) {
     struct timeval tv;
     gettimeofday(&tv, NULL);
     localtime_r(&tv.tv_sec, tp);
-    sprintf(buf, "%04d-%02d-%02d %02d:%02d:%02d.%06ld", tp->tm_year + 1900, tp->tm_mon + 1, tp->tm_mday,
-            tp->tm_hour, tp->tm_min, tp->tm_sec, tv.tv_usec);
+    snprintf(buf, 27, "%04d-%02d-%02d %02d:%02d:%02d.%06ld", tp->tm_year + 1900, tp->tm_mon + 1,
+             tp->tm_mday, tp->tm_hour, tp->tm_min, tp->tm_sec, tv.tv_usec);
 }
 
 #endif
