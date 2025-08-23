@@ -67,9 +67,10 @@ static void generic_func(struct logger* l, const char* filename, int line,
                          unsigned int level, const char* fmt, ...) {
     if (level >= l->level) {
         struct stdout_logger* sl = container_of(l, struct stdout_logger, l);
+        FILE* fp = (level <= LOGGER_LEVEL_INFO) ? stdout : stderr;
         va_list args;
         va_start(args, fmt);
-        generic_logger(level, stderr, &sl->impl->stderr_lock, filename, line,
+        generic_logger(level, fp, &sl->impl->stderr_lock, filename, line,
                        fmt, &args);
         va_end(args);
     }
