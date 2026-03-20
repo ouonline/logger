@@ -4,6 +4,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <stdio.h>
+#include <stddef.h> // offsetof
 
 static inline void current_datetime(char buf[], struct tm* tp) {
     struct tm ltm;
@@ -15,7 +16,10 @@ static inline void current_datetime(char buf[], struct tm* tp) {
     gettimeofday(&tv, NULL);
     localtime_r(&tv.tv_sec, tp);
     snprintf(buf, 27, "%04d-%02d-%02d %02d:%02d:%02d.%06d", tp->tm_year + 1900, tp->tm_mon + 1,
-             tp->tm_mday, tp->tm_hour, tp->tm_min, tp->tm_sec, (int32_t)tv.tv_usec);
+             tp->tm_mday, tp->tm_hour, tp->tm_min, tp->tm_sec, (int)tv.tv_usec);
 }
+
+#define container_of(ptr, type, member)                         \
+    ((type*)((unsigned long)(ptr) - offsetof(type, member)))
 
 #endif

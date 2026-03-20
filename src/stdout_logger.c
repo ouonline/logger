@@ -1,5 +1,4 @@
 #include "logger/stdout_logger.h"
-#include "cutils/utils.h"
 #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
