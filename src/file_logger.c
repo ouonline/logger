@@ -1,10 +1,10 @@
 #include "logger/file_logger.h"
 #include "utils.h"
+#include "mutex_def.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include <pthread.h>
 
 /* ------------------------------------------------------------------------- */
 
@@ -16,11 +16,11 @@ static const char* g_log_level_str[] = {
 
 /* fields of logging timestamp */
 struct log_tm {
-    unsigned short tm_year;
-    unsigned short tm_mon;
-    unsigned short tm_mday;
-    unsigned short tm_hour;
-} __attribute__((packed));
+    uint16_t tm_year;
+    uint16_t tm_mon;
+    uint16_t tm_mday;
+    uint16_t tm_hour;
+};
 
 /*
  * log filename may be one of the following forms:
@@ -37,27 +37,27 @@ struct log_tm {
 
 #define PATH_BUFLEN 1024
 
-#define PATH_PREFIX_BUFLEN  (PATH_BUFLEN                        \
-                             - sizeof(unsigned long)            \
+#define PATH_PREFIX_BUFLEN  (PATH_BUFLEN                      \
+                             - sizeof(uint64_t)               \
                              - sizeof(void*) - sizeof(void*))
 
 /* variables that will be initialized in file_logger_init() */
 struct logger_var {
-    unsigned long max_file_size;
+    uint64_t max_file_size;
 
     int (*rotate_trigger)(const struct tm* current, const struct log_tm* old,
-                          unsigned long max_file_size, unsigned long filesize);
+                          uint64_t max_file_size, uint64_t filesize);
     void (*get_filename)(char* buf, const struct tm* ts);
 
     char path_prefix[PATH_PREFIX_BUFLEN];
-} __attribute__((packed));
+};
 
 #define MAX_LOG_LEN 4096
 
 struct logger_info {
     FILE* fp;
     struct log_tm ts; /* timestamp of last write */
-    unsigned long filesize;
+    uint64_t filesize;
     pthread_mutex_t lock;
     char buf[MAX_LOG_LEN];
 };
@@ -83,7 +83,7 @@ static void __new_log_file(struct logger_info* logger, struct logger_var* var,
     len = snprintf(path, PATH_BUFLEN, "%s_", var->path_prefix);
     var->get_filename(path + len, ts);
 
-    logger->fp = fopen(path, "a");
+    logger->fp = fopen(path, "ab");
     if (!logger->fp) {
         fprintf(stderr, "cannot create/open file `%s`, redirecting to stdout.\n", path);
         logger->fp = stdout;
@@ -105,10 +105,10 @@ static void generic_logger(struct logger* l, unsigned int level,
 
     if (var->rotate_trigger(&tm, &info->ts, var->max_file_size, info->filesize)) {
         __new_log_file(info, var, &tm);
-        info->ts.tm_hour = tm.tm_hour;
-        info->ts.tm_mday = tm.tm_mday;
-        info->ts.tm_mon = tm.tm_mon;
-        info->ts.tm_year = tm.tm_year;
+        info->ts.tm_hour = (uint16_t)tm.tm_hour;
+        info->ts.tm_mday = (uint16_t)tm.tm_mday;
+        info->ts.tm_mon = (uint16_t)tm.tm_mon;
+        info->ts.tm_year = (uint16_t)tm.tm_year;
     }
 
     vsnprintf(info->buf, MAX_LOG_LEN, fmt, *args);
@@ -135,8 +135,8 @@ static void generic_func(struct logger* l, const char* filename, int line,
 
 static int trigger_size(const struct tm* current,
                         const struct log_tm* old,
-                        unsigned long max_file_size,
-                        unsigned long filesize) {
+                        uint64_t max_file_size,
+                        uint64_t filesize) {
     (void)current;
     (void)old;
     return (filesize >= max_file_size);
@@ -150,8 +150,8 @@ static void filename_size(char* buf, const struct tm* ts) {
 
 static int trigger_hour(const struct tm* current,
                         const struct log_tm* old,
-                        unsigned long max_file_size,
-                        unsigned long filesize) {
+                        uint64_t max_file_size,
+                        uint64_t filesize) {
     (void)max_file_size;
     (void)filesize;
     return (! ((old->tm_hour == current->tm_hour) &&
@@ -167,8 +167,8 @@ static void filename_hour(char* buf, const struct tm* ts) {
 
 static int trigger_day(const struct tm* current,
                        const struct log_tm* old,
-                       unsigned long max_file_size,
-                       unsigned long filesize) {
+                       uint64_t max_file_size,
+                       uint64_t filesize) {
     (void)max_file_size;
     (void)filesize;
     return (! ((old->tm_mday == current->tm_mday) &&
@@ -183,8 +183,8 @@ static void filename_day(char* buf, const struct tm* ts) {
 
 static int trigger_size_hour(const struct tm* current,
                              const struct log_tm* old,
-                             unsigned long max_file_size,
-                             unsigned long filesize) {
+                             uint64_t max_file_size,
+                             uint64_t filesize) {
     return (trigger_size(current, old, max_file_size, filesize) ||
             trigger_hour(current, old, max_file_size, filesize));
 }
@@ -195,8 +195,8 @@ static void filename_size_hour(char* buf, const struct tm* ts) {
 
 static int trigger_size_day(const struct tm* current,
                             const struct log_tm* old,
-                            unsigned long max_file_size,
-                            unsigned long filesize) {
+                            uint64_t max_file_size,
+                            uint64_t filesize) {
     return (trigger_size(current, old, max_file_size, filesize) ||
             trigger_day(current, old, max_file_size, filesize));
 }
@@ -239,7 +239,7 @@ static void logger_var_set_func(struct logger_var* var, unsigned flags) {
 static void logger_var_set_path_prefix(struct logger_var* var,
                                        const char* dirpath, const char* prefix,
                                        unsigned int max_prefix_len) {
-    unsigned int path_prefix_len = strlen(dirpath) + 1 /* '/' */ + strlen(prefix);
+    size_t path_prefix_len = strlen(dirpath) + 1 /* '/' */ + strlen(prefix);
 
     if (path_prefix_len > max_prefix_len) {
         fprintf(stderr, "prefix len is greater than [%d], truncated.\n",
@@ -277,9 +277,6 @@ static void logger_var_init(struct logger_var* var,
 
 /* ------------------------------------------------------------------------- */
 
-#include <sys/stat.h>
-#include <errno.h>
-
 int file_logger_init(struct file_logger* l, const char* dirpath, const char* prefix,
                      unsigned int flags, unsigned int max_megabytes) {
     if (!dirpath || !prefix) {
@@ -287,20 +284,12 @@ int file_logger_init(struct file_logger* l, const char* dirpath, const char* pre
         return -1;
     }
 
-    if (mkdir(dirpath, 0755) != 0) {
-        if (errno != EEXIST) {
-            fprintf(stderr, "logger init: mkdir(%s) failed: %s.\n",
-                    dirpath, strerror(errno));
-            return -1;
-        }
-    }
-
     l->impl = malloc(sizeof(struct file_logger_impl));
     if (!l->impl) {
         return -1;
     }
 
-    memset(l->impl, 0, sizeof(struct file_logger));
+    memset(l->impl, 0, sizeof(struct file_logger_impl));
     logger_info_init(&l->impl->info);
     logger_var_init(&l->impl->var, dirpath, prefix, flags, max_megabytes);
 

@@ -1,28 +1,17 @@
 #include "logger/stdout_logger.h"
 #include "utils.h"
+#include "mutex_def.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <pthread.h>
 
 #define MAX_LOG_LEN 4096
 
 struct stdout_logger_impl {
-    pthread_mutex_t stdout_lock;
-    pthread_mutex_t stderr_lock;
+    pthread_mutex_t out_lock;
 };
 
-#ifdef LOGGER_STDOUT_ANSI_COLOR
-#define COLOR_LIGHT_BLACK_BEGIN "\e[1;30m"
-#define COLOR_LIGHT_RED_BEGIN "\e[1;31m"
-#define COLOR_LIGHT_GREEN_BEGIN "\e[1;32m"
-#define COLOR_LIGHT_YELLOW_BEGIN "\e[1;33m"
-#define COLOR_LIGHT_BLUE_BEGIN "\e[1;34m"
-#define COLOR_LIGHT_PURPLE_BEGIN "\e[1;35m"
-#define COLOR_LIGHT_CYAN_BEGIN "\e[1;36m"
-#define COLOR_LIGHT_WHITE_BEGIN "\e[1;37m"
-#define COLOR_END "\e[0m"
-#else
+#if !defined(LOGGER_STDOUT_ANSI_COLOR) || defined(_WIN32) || defined(_WIN64)
 #define COLOR_LIGHT_BLACK_BEGIN
 #define COLOR_LIGHT_RED_BEGIN
 #define COLOR_LIGHT_GREEN_BEGIN
@@ -32,6 +21,16 @@ struct stdout_logger_impl {
 #define COLOR_LIGHT_CYAN_BEGIN
 #define COLOR_LIGHT_WHITE_BEGIN
 #define COLOR_END
+#else
+#define COLOR_LIGHT_BLACK_BEGIN "\e[1;30m"
+#define COLOR_LIGHT_RED_BEGIN "\e[1;31m"
+#define COLOR_LIGHT_GREEN_BEGIN "\e[1;32m"
+#define COLOR_LIGHT_YELLOW_BEGIN "\e[1;33m"
+#define COLOR_LIGHT_BLUE_BEGIN "\e[1;34m"
+#define COLOR_LIGHT_PURPLE_BEGIN "\e[1;35m"
+#define COLOR_LIGHT_CYAN_BEGIN "\e[1;36m"
+#define COLOR_LIGHT_WHITE_BEGIN "\e[1;37m"
+#define COLOR_END "\e[0m"
 #endif
 
 static const char* g_log_level_str[] = {
@@ -69,7 +68,7 @@ static void generic_func(struct logger* l, const char* filename, int line,
         FILE* fp = (level <= LOGGER_LEVEL_INFO) ? stdout : stderr;
         va_list args;
         va_start(args, fmt);
-        generic_logger(level, fp, &sl->impl->stderr_lock, filename, line,
+        generic_logger(level, fp, &sl->impl->out_lock, filename, line,
                        fmt, &args);
         va_end(args);
     }
@@ -81,8 +80,7 @@ int stdout_logger_init(struct stdout_logger* l) {
         return -1;
     }
 
-    pthread_mutex_init(&l->impl->stdout_lock, NULL);
-    pthread_mutex_init(&l->impl->stderr_lock, NULL);
+    pthread_mutex_init(&l->impl->out_lock, NULL);
 
 #ifdef NDEBUG
     l->l.level = LOGGER_LEVEL_INFO;
@@ -97,8 +95,7 @@ int stdout_logger_init(struct stdout_logger* l) {
 
 void stdout_logger_destroy(struct stdout_logger* l) {
     if (l->impl) {
-        pthread_mutex_destroy(&l->impl->stdout_lock);
-        pthread_mutex_destroy(&l->impl->stderr_lock);
+        pthread_mutex_destroy(&l->impl->out_lock);
         free(l->impl);
         l->impl = NULL;
     }

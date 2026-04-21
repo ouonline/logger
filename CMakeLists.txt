@@ -19,7 +19,12 @@ if(LOGGER_STDOUT_ANSI_COLOR)
     target_compile_definitions(logger_static PUBLIC LOGGER_STDOUT_ANSI_COLOR)
 endif()
 
-target_compile_options(logger_static PRIVATE -Wall -Wextra -Werror -Wno-format-truncation)
+if(MSVC)
+    target_compile_definitions(logger_static PRIVATE _CRT_SECURE_NO_WARNINGS)
+    target_compile_options(logger_static PRIVATE /W4)
+else()
+    target_compile_options(logger_static PRIVATE -Wall -Wextra -Werror -Wno-format-truncation)
+endif()
 
 # ----- installations ----- #
 
